@@ -77,8 +77,8 @@ Phase 7 (watch)   Phase 8 (safety)
 - [x] **Task 1.1**: Initialize Rust project with Cargo, set up workspace structure, configure Cargo.toml with dependencies (clap, walkdir, ignore, notify, toml, serde, unic-emoji-char, thiserror, anyhow), create module structure (main.rs, lib.rs, cli/, core/, config/, watch/), add LICENSE and basic README
 
 ### Phase 2: Core Emoji Processing (can run in parallel after Phase 1)
-- [ ] **Task 2.1**: Implement emoji detection module (`core/emoji.rs`) - create `EmojiDetector` struct with methods to identify emoji characters using Unicode ranges and `unic-emoji-char`, handle emoji sequences (ZWJ, skin tones, flags), create `EmojiMatch` struct with position and character info
-- [ ] **Task 2.2**: Implement replacement strategies (`core/replacer.rs`) - create `ReplacementMode` enum (Remove, Replace, Placeholder), build ASCII alternatives mapping, implement `EmojiReplacer` trait with different strategy implementations, ensure proper handling of multi-byte emoji sequences
+- [x] **Task 2.1**: Implement emoji detection module (`core/emoji.rs`) - create `EmojiDetector` struct with methods to identify emoji characters using Unicode ranges and `unic-emoji-char`, handle emoji sequences (ZWJ, skin tones, flags), create `EmojiMatch` struct with position and character info
+- [x] **Task 2.2**: Implement replacement strategies (`core/replacer.rs`) - create `ReplacementMode` enum (Remove, Replace, Placeholder), build ASCII alternatives mapping, implement `EmojiReplacer` trait with different strategy implementations, ensure proper handling of multi-byte emoji sequences
 - [ ] **Task 2.3**: Write comprehensive unit tests for emoji processing (`core/emoji_tests.rs`, `core/replacer_tests.rs`) - test single emojis, sequences, edge cases (ZWJ families, flags, skin tones), test all replacement modes, include tests with real source code snippets
 
 ### Phase 3: File Operations (depends on Phase 2)
@@ -87,7 +87,7 @@ Phase 7 (watch)   Phase 8 (safety)
 - [ ] **Task 3.3**: Write integration tests for file operations - test with various file types, test gitignore respect, test large file handling, test backup creation, test dry-run mode
 
 ### Phase 4: Configuration System (can run in parallel with Phase 3)
-- [ ] **Task 4.1**: Implement configuration module (`config/mod.rs`) - define `Config` struct with serde, support `.demoji.toml` in project root and home directory, implement config discovery (walk up from cwd), merge configs (CLI args > project config > global config > defaults), define sensible defaults
+- [x] **Task 4.1**: Implement configuration module (`config/mod.rs`) - define `Config` struct with serde, support `.demoji.toml` in project root and home directory, implement config discovery (walk up from cwd), merge configs (CLI args > project config > global config > defaults), define sensible defaults
 
 ### Phase 5: CLI Interface (depends on Phases 3 & 4)
 - [ ] **Task 5.1**: Implement CLI argument parsing (`cli/args.rs`) - use clap derive macros, subcommands: `run` (default), `watch`, `init` (create config), flags: `--dry-run`, `--backup`, `--mode`, `--pattern`, `--exclude`, `--verbose`, `--quiet`, implement shell completions generation
@@ -110,7 +110,7 @@ Phase 7 (watch)   Phase 8 (safety)
 - [ ] **Task 9.2**: Package manager configurations - Homebrew formula (tap repository), Cargo publishing configuration (crates.io), AUR PKGBUILD for Arch Linux, npm wrapper package for node users, Scoop manifest for Windows
 
 ### Phase 10: Documentation (can run in parallel with Phase 9)
-- [ ] **Task 10.1**: Write comprehensive documentation - README.md with installation, usage examples, configuration reference, CONTRIBUTING.md with development setup, man page generation, inline code documentation (rustdoc)
+- [x] **Task 10.1**: Write comprehensive documentation - README.md with installation, usage examples, configuration reference, CONTRIBUTING.md with development setup, man page generation, inline code documentation (rustdoc)
 
 ### Phase 11: End-to-End Testing (depends on Phases 8 & 9)
 - [ ] **Task 11.1**: Create end-to-end test suite - test CLI invocation with various arguments, test with real-world project structures, test watch mode with file modifications, test all replacement modes end-to-end, performance benchmarks with large codebases

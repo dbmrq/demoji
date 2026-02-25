@@ -1,0 +1,41 @@
+name: Update Homebrew Formula
+
+on:
+  push:
+    tags:
+      - 'v*'  # Trigger on version tags like v0.1.0, v1.0.0
+
+jobs:
+  update-homebrew:
+    name: Update Homebrew Formula
+    runs-on: ubuntu-latest
+    steps:
+      - name: Extract version from tag
+        id: version
+        run: echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+
+      - name: Checkout homebrew-tap
+        uses: actions/checkout@v4
+        with:
+          repository: dbmrq/homebrew-tap
+          token: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+          path: homebrew-tap
+
+      - name: Update formula
+        run: |
+          cd homebrew-tap
+          # Update the tag in the formula
+          sed -i 's/tag: "v[^"]*"/tag: "${{ steps.version.outputs.VERSION }}"/' Formula/demoji.rb
+          
+          # Show the updated formula
+          cat Formula/demoji.rb
+
+      - name: Commit and push
+        run: |
+          cd homebrew-tap
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add Formula/demoji.rb
+          git commit -m "Update demoji to ${{ steps.version.outputs.VERSION }}"
+          git push
+

@@ -39,7 +39,7 @@
 //!
 //! // Detect emojis in text
 //! let detector = EmojiDetector::new();
-//! let text = "Hello 👋 World 🌍";
+//! let text = "Hello  World ";
 //! // Process text...
 //!
 //! // Use different replacement modes
@@ -56,9 +56,21 @@
 //!
 //! ## Replacement Modes
 //!
-//! ### Remove (default)
+//! ### Smart (default)
 //!
-//! Removes emoji characters entirely:
+//! Replaces functional emojis with ASCII equivalents and removes decorative ones:
+//!
+//! ```text
+//! Before: const status = "✅ Success 🎉";
+//! After:  const status = "[OK] Success ";
+//! ```
+//!
+//! Functional emojis include checkmarks, X marks, warnings, arrows, and common
+//! development symbols (🐛, 🚀, 💡, etc.).
+//!
+//! ### Remove
+//!
+//! Removes all emoji characters entirely:
 //!
 //! ```text
 //! Before: const msg = "Hello 👋 World";
@@ -67,7 +79,7 @@
 //!
 //! ### Replace
 //!
-//! Replaces emojis with ASCII alternatives:
+//! Replaces emojis with ASCII alternatives (comprehensive mapping):
 //!
 //! ```text
 //! Before: const status = "✅ Success";
@@ -88,7 +100,7 @@
 //! Create a `.demoji.toml` file in your project root:
 //!
 //! ```toml
-//! mode = "remove"
+//! mode = "smart"
 //! backup = true
 //! include = ["**/*.rs", "**/*.js"]
 //! exclude = ["vendor/**"]
@@ -146,6 +158,9 @@
 //! - `1`: Emojis were found (useful with `--check` flag in CI)
 //! - `2`: Error occurred (IO error, permission denied, invalid config, etc.)
 
+// Allow eprintln! for user-facing error output in CLI
+#![allow(clippy::print_stderr)]
+
 // Public API modules
 pub mod cli;
 pub mod config;
@@ -180,7 +195,10 @@ use std::path::PathBuf;
 /// - `0`: Success (no emojis found or successfully processed)
 /// - `1`: Emojis were found (useful for CI checks)
 /// - `2`: Error occurred (IO, permission, config parsing, etc.)
-pub fn run(args: Args, config: Config) -> Result<i32> {
+///
+/// # Errors
+/// Returns an error if processing fails.
+pub fn run(args: &Args, config: &Config) -> Result<i32> {
     // Determine verbosity level
     let verbosity = if args.quiet {
         VerbosityLevel::Quiet
@@ -194,7 +212,7 @@ pub fn run(args: Args, config: Config) -> Result<i32> {
     let mut reporter = create_reporter(verbosity);
 
     // Handle subcommands
-    match args.command {
+    match &args.command {
         Some(Command::Run {
             paths: cmd_paths,
             dry_run: cmd_dry_run,
@@ -210,20 +228,20 @@ pub fn run(args: Args, config: Config) -> Result<i32> {
             let merged_args = Args {
                 command: None,
                 paths: if cmd_paths.is_empty() {
-                    args.paths
+                    args.paths.clone()
                 } else {
-                    cmd_paths
+                    cmd_paths.clone()
                 },
-                dry_run: cmd_dry_run || args.dry_run,
-                backup: cmd_backup || args.backup,
-                mode: cmd_mode.or(args.mode),
-                extensions: cmd_extensions.or(args.extensions),
-                exclude: cmd_exclude.or(args.exclude),
-                verbose: cmd_verbose || args.verbose,
-                quiet: cmd_quiet || args.quiet,
-                placeholder: cmd_placeholder.or(args.placeholder),
+                dry_run: *cmd_dry_run || args.dry_run,
+                backup: *cmd_backup || args.backup,
+                mode: cmd_mode.clone().or_else(|| args.mode.clone()),
+                extensions: cmd_extensions.clone().or_else(|| args.extensions.clone()),
+                exclude: cmd_exclude.clone().or_else(|| args.exclude.clone()),
+                verbose: *cmd_verbose || args.verbose,
+                quiet: *cmd_quiet || args.quiet,
+                placeholder: cmd_placeholder.clone().or_else(|| args.placeholder.clone()),
             };
-            run_on_paths(merged_args, config, &mut *reporter)
+            run_on_paths(&merged_args, config, &mut *reporter)
         }
         None => {
             // Default run command
@@ -246,9 +264,10 @@ pub fn run(args: Args, config: Config) -> Result<i32> {
 ///
 /// Handles the core logic of walking directories and processing files.
 /// Returns exit code based on results.
+#[allow(clippy::too_many_lines, clippy::unnecessary_wraps)]
 fn run_on_paths(
-    args: Args,
-    config: Config,
+    args: &Args,
+    config: &Config,
     reporter: &mut dyn cli::output::Reporter,
 ) -> Result<i32> {
     // Determine paths to process
@@ -261,6 +280,7 @@ fn run_on_paths(
     // Determine replacement mode from CLI args or config with better error handling
     let mode = if let Some(mode_str) = &args.mode {
         match mode_str.to_lowercase().as_str() {
+            "smart" => ReplacementMode::Smart,
             "remove" => ReplacementMode::Remove,
             "replace" => ReplacementMode::Replace,
             "placeholder" => ReplacementMode::Placeholder,
@@ -293,23 +313,26 @@ fn run_on_paths(
 
     // Add backup manager if backup is enabled
     if backup {
-        let backup_manager = crate::core::backup::BackupManager::new();
+        let backup_manager = core::backup::BackupManager::new();
         processor = processor.with_backup(backup_manager);
     }
 
     // Determine extensions to process
-    let extensions = if let Some(ext_str) = &args.extensions {
-        ext_str.split(',').map(|s| s.trim().to_string()).collect()
-    } else if !config.extensions.is_empty() {
-        config.extensions.clone()
-    } else {
-        Vec::new()
-    };
+    let extensions = args.extensions.as_ref().map_or_else(
+        || {
+            if config.extensions.is_empty() {
+                Vec::new()
+            } else {
+                config.extensions.clone()
+            }
+        },
+        |ext_str| ext_str.split(',').map(|s| s.trim().to_owned()).collect(),
+    );
 
     // Determine ignore patterns
     let mut ignore_patterns = config.ignore_patterns.clone();
     if let Some(exclude_str) = &args.exclude {
-        ignore_patterns.extend(exclude_str.split(',').map(|s| s.trim().to_string()));
+        ignore_patterns.extend(exclude_str.split(',').map(|s| s.trim().to_owned()));
     }
 
     // Process all paths
@@ -318,49 +341,52 @@ fn run_on_paths(
     let mut total_emojis = 0;
     let mut file_count = 0;
 
+    // Helper closure to process a single file and report results
+    let mut process_single_file = |file_path: &std::path::Path| -> Result<bool, i32> {
+        file_count += 1;
+        total_files += 1;
+
+        match processor.process_file(file_path) {
+            Ok(result) => {
+                if result.has_emojis() {
+                    files_with_emojis += 1;
+                    total_emojis += result.emojis_found;
+                    reporter.report_file(file_path.to_string_lossy().as_ref(), file_count);
+
+                    for emoji_match in &result.emoji_matches {
+                        let context = extract_context(
+                            &result.original_content,
+                            emoji_match.start,
+                            emoji_match.end,
+                            10,
+                        );
+                        reporter.report_match(
+                            emoji_match.line,
+                            emoji_match.column,
+                            &emoji_match.emoji,
+                            &context,
+                        );
+                    }
+                }
+                Ok(true)
+            }
+            Err(e) => {
+                if let Some(demoji_err) = e.downcast_ref::<DemojiError>() {
+                    eprintln!("{}", demoji_err.user_message());
+                } else {
+                    eprintln!("Error processing file {}: {}", file_path.display(), e);
+                }
+                Err(2)
+            }
+        }
+    };
+
     for path in paths {
         if path.is_file() {
-            // Process single file
-            file_count += 1;
-            total_files += 1;
-
-            match processor.process_file(&path) {
-                Ok(result) => {
-                    if result.has_emojis() {
-                        files_with_emojis += 1;
-                        total_emojis += result.emojis_found;
-
-                        reporter.report_file(path.to_string_lossy().as_ref(), file_count);
-
-                        for emoji_match in &result.emoji_matches {
-                            let context = extract_context(
-                                &result.original_content,
-                                emoji_match.start,
-                                emoji_match.end,
-                                10,
-                            );
-
-                            reporter.report_match(
-                                emoji_match.line,
-                                emoji_match.column,
-                                &emoji_match.emoji,
-                                &context,
-                            );
-                        }
-                    }
-                }
-                Err(e) => {
-                    // Check if it's a DemojiError for better messaging
-                    if let Some(demoji_err) = e.downcast_ref::<DemojiError>() {
-                        eprintln!("{}", demoji_err.user_message());
-                    } else {
-                        eprintln!("Error processing file {}: {}", path.display(), e);
-                    }
-                    return Ok(2);
-                }
+            if let Err(code) = process_single_file(&path) {
+                return Ok(code);
             }
         } else if path.is_dir() {
-            // Process directory
             let walker = DirectoryWalker::new(&path)
                 .with_extensions(extensions.clone())
                 .with_ignore_patterns(ignore_patterns.clone());
@@ -368,58 +394,15 @@ fn run_on_paths(
             for file_result in walker.walk() {
                 match file_result {
                     Ok(file_path) => {
-                        file_count += 1;
-                        total_files += 1;
-
-                        match processor.process_file(&file_path) {
-                            Ok(result) => {
-                                if result.has_emojis() {
-                                    files_with_emojis += 1;
-                                    total_emojis += result.emojis_found;
-
-                                    reporter.report_file(
-                                        file_path.to_string_lossy().as_ref(),
-                                        file_count,
-                                    );
-
-                                    for emoji_match in &result.emoji_matches {
-                                        let context = extract_context(
-                                            &result.original_content,
-                                            emoji_match.start,
-                                            emoji_match.end,
-                                            10,
-                                        );
-
-                                        reporter.report_match(
-                                            emoji_match.line,
-                                            emoji_match.column,
-                                            &emoji_match.emoji,
-                                            &context,
-                                        );
-                                    }
-                                }
-                            }
-                            Err(e) => {
-                                // Check if it's a DemojiError for better messaging
-                                if let Some(demoji_err) = e.downcast_ref::<DemojiError>() {
-                                    eprintln!("{}", demoji_err.user_message());
-                                } else {
-                                    eprintln!(
-                                        "Error processing file {}: {}",
-                                        file_path.display(),
-                                        e
-                                    );
-                                }
-                                return Ok(2);
-                            }
+                        if let Err(code) = process_single_file(&file_path) {
+                            return Ok(code);
                         }
                     }
                     Err(e) => {
-                        // Check if it's a DemojiError for better messaging
                         if let Some(demoji_err) = e.downcast_ref::<DemojiError>() {
                             eprintln!("{}", demoji_err.user_message());
                         } else {
-                            eprintln!("Error walking directory: {}", e);
+                            eprintln!("Error walking directory: {e}");
                         }
                         return Ok(2);
                     }
@@ -450,26 +433,15 @@ fn extract_context(content: &str, start: usize, end: usize, context_width: usize
     let mut context_end = (end + context_width).min(content.len());
 
     // Move context_start forward to a valid UTF-8 boundary
-    while context_start < start && !is_char_boundary(content, context_start) {
+    while context_start < start && !content.is_char_boundary(context_start) {
         context_start += 1;
     }
 
     // Move context_end backward to a valid UTF-8 boundary
-    while context_end > end && !is_char_boundary(content, context_end) {
+    while context_end > end && !content.is_char_boundary(context_end) {
         context_end -= 1;
     }
 
     // Extract and return the context
     content[context_start..context_end].to_string()
-}
-
-/// Check if a position is a valid UTF-8 character boundary
-fn is_char_boundary(s: &str, index: usize) -> bool {
-    if index > s.len() {
-        return false;
-    }
-    if index == 0 || index == s.len() {
-        return true;
-    }
-    s.is_char_boundary(index)
 }

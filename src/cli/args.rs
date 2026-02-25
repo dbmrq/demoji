@@ -30,7 +30,7 @@ pub struct Args {
     #[arg(long, global = true)]
     pub backup: bool,
 
-    /// Replacement mode: remove, replace, or placeholder
+    /// Replacement mode: smart, remove, replace, or placeholder
     #[arg(long, global = true, value_name = "MODE")]
     pub mode: Option<String>,
 
@@ -72,7 +72,7 @@ pub enum Command {
         #[arg(long)]
         backup: bool,
 
-        /// Replacement mode: remove, replace, or placeholder
+        /// Replacement mode: smart, remove, replace, or placeholder
         #[arg(long, value_name = "MODE")]
         mode: Option<String>,
 
@@ -111,7 +111,7 @@ pub enum Command {
         #[arg(long)]
         backup: bool,
 
-        /// Replacement mode: remove, replace, or placeholder
+        /// Replacement mode: smart, remove, replace, or placeholder
         #[arg(long, value_name = "MODE")]
         mode: Option<String>,
 
@@ -153,6 +153,11 @@ pub enum Command {
 }
 
 #[cfg(test)]
+#[allow(
+    clippy::unwrap_used,
+    clippy::needless_borrows_for_generic_args,
+    clippy::str_to_string
+)]
 mod tests {
     use super::*;
 

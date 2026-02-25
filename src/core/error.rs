@@ -11,52 +11,76 @@ pub type DemojiResult<T> = Result<T, DemojiError>;
 
 /// Custom error type for demoji operations
 #[derive(Error, Debug)]
+#[allow(missing_docs)] // enum variant fields don't need individual docs
 pub enum DemojiError {
     /// Permission denied error with helpful suggestion
     #[error("Permission denied: {path}")]
     PermissionDenied {
+        /// The path that caused the error.
         path: PathBuf,
+        /// The underlying IO error.
         #[source]
         source: io::Error,
     },
 
     /// File not found error
     #[error("File not found: {path}")]
-    FileNotFound { path: PathBuf },
+    FileNotFound {
+        /// The path that was not found.
+        path: PathBuf,
+    },
 
     /// File encoding error (non-UTF-8)
     #[error("File encoding error: {path} is not valid UTF-8")]
-    EncodingError { path: PathBuf },
+    EncodingError {
+        /// The path with encoding issues.
+        path: PathBuf,
+    },
 
     /// Configuration parsing error with optional line/column info
     #[error("Configuration parsing error in {path}")]
     ConfigParseError {
+        /// The config file path.
         path: PathBuf,
+        /// The underlying parse error.
         #[source]
         source: Box<dyn std::error::Error + Send + Sync>,
+        /// The line number where the error occurred.
         line: Option<usize>,
+        /// The column number where the error occurred.
         column: Option<usize>,
     },
 
     /// Invalid replacement mode
     #[error("Invalid replacement mode: {mode}. Use 'remove', 'replace', or 'placeholder'")]
-    InvalidMode { mode: String },
+    InvalidMode {
+        /// The invalid mode string.
+        mode: String,
+    },
 
     /// Invalid path (doesn't exist or is invalid)
     #[error("Invalid path: {path}")]
-    InvalidPath { path: PathBuf },
+    InvalidPath {
+        /// The invalid path.
+        path: PathBuf,
+    },
 
     /// Generic IO error
     #[error("IO error: {message}")]
     IoError {
+        /// A descriptive message.
         message: String,
+        /// The underlying IO error.
         #[source]
         source: io::Error,
     },
 
     /// Directory walking error
     #[error("Error walking directory: {message}")]
-    WalkError { message: String },
+    WalkError {
+        /// A descriptive message.
+        message: String,
+    },
 
     /// Configuration not found (non-fatal)
     #[error("Configuration file not found")]
@@ -64,47 +88,51 @@ pub enum DemojiError {
 
     /// Generic error with context
     #[error("{message}")]
-    Other { message: String },
+    Other {
+        /// A descriptive message.
+        message: String,
+    },
 }
 
 impl DemojiError {
     /// Returns a user-friendly suggestion for fixing this error
+    #[allow(clippy::missing_const_for_fn)] // match on self prevents const
     pub fn suggestion(&self) -> Option<&'static str> {
         match self {
-            DemojiError::PermissionDenied { .. } => {
+            Self::PermissionDenied { .. } => {
                 Some("Try running with elevated privileges (sudo) or check file permissions with 'ls -la'")
             }
-            DemojiError::EncodingError { .. } => {
+            Self::EncodingError { .. } => {
                 Some("The file contains non-UTF-8 characters. Try converting it to UTF-8 or excluding it from processing.")
             }
-            DemojiError::FileNotFound { .. } => {
+            Self::FileNotFound { .. } => {
                 Some("Check that the path exists and is spelled correctly.")
             }
-            DemojiError::ConfigParseError { .. } => {
+            Self::ConfigParseError { .. } => {
                 Some("Check the TOML syntax in your .demoji.toml file. Use 'demoji init' to generate a valid template.")
             }
-            DemojiError::InvalidMode { .. } => {
+            Self::InvalidMode { .. } => {
                 Some("Valid modes are: 'remove' (default), 'replace' (ASCII alternatives), or 'placeholder' (custom text).")
             }
-            DemojiError::InvalidPath { .. } => {
+            Self::InvalidPath { .. } => {
                 Some("Verify the path exists and is accessible.")
             }
-            DemojiError::IoError { .. } => {
+            Self::IoError { .. } => {
                 Some("Check file permissions and disk space.")
             }
-            DemojiError::WalkError { .. } => {
+            Self::WalkError { .. } => {
                 Some("Check that the directory exists and is accessible.")
             }
-            DemojiError::ConfigNotFound => {
+            Self::ConfigNotFound => {
                 Some("Run 'demoji init' to create a configuration file, or use CLI flags to configure behavior.")
             }
-            DemojiError::Other { .. } => None,
+            Self::Other { .. } => None,
         }
     }
 
     /// Formats the error with suggestion for display to user
     pub fn user_message(&self) -> String {
-        let mut msg = format!("Error: {}", self);
+        let mut msg = format!("Error: {self}");
         if let Some(suggestion) = self.suggestion() {
             msg.push('\n');
             msg.push_str("Suggestion: ");
@@ -118,14 +146,14 @@ impl DemojiError {
 impl From<io::Error> for DemojiError {
     fn from(err: io::Error) -> Self {
         match err.kind() {
-            io::ErrorKind::PermissionDenied => DemojiError::PermissionDenied {
+            io::ErrorKind::PermissionDenied => Self::PermissionDenied {
                 path: PathBuf::from("<unknown>"),
                 source: err,
             },
-            io::ErrorKind::NotFound => DemojiError::FileNotFound {
+            io::ErrorKind::NotFound => Self::FileNotFound {
                 path: PathBuf::from("<unknown>"),
             },
-            _ => DemojiError::IoError {
+            _ => Self::IoError {
                 message: err.to_string(),
                 source: err,
             },
@@ -134,6 +162,7 @@ impl From<io::Error> for DemojiError {
 }
 
 #[cfg(test)]
+#[allow(clippy::str_to_string)]
 mod tests {
     use super::*;
 

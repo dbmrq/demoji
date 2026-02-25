@@ -2,10 +2,11 @@
 name = "demoji"
 version = "0.1.0"
 edition = "2021"
+rust-version = "1.74"  # MSRV - minimum supported Rust version
 authors = ["demoji contributors"]
 description = "A fast CLI tool to remove or replace emoji characters from source code files"
 license = "MIT"
-repository = "https://github.com/yourusername/demoji"
+repository = "https://github.com/dbmrq/demoji"
 readme = "README.md"
 keywords = ["emoji", "cli", "source-code", "cleanup"]
 categories = ["command-line-utilities", "development-tools"]
@@ -31,3 +32,202 @@ predicates = "3"
 name = "demoji"
 path = "src/main.rs"
 
+# ============================================================================
+# Lints Configuration - Strict settings for high code quality
+# ============================================================================
+
+[lints.rust]
+# Deny all unused code patterns
+dead_code = "deny"
+unused_imports = "deny"
+unused_variables = "deny"
+unused_mut = "deny"
+unused_assignments = "deny"
+unused_must_use = "deny"
+unreachable_code = "deny"
+unreachable_patterns = "deny"
+
+# Safety and correctness
+unsafe_code = "deny"
+missing_docs = "warn"
+
+# Future compatibility
+rust_2018_idioms = { level = "deny", priority = -1 }
+rust_2021_compatibility = { level = "deny", priority = -1 }
+future_incompatible = { level = "deny", priority = -1 }
+nonstandard_style = { level = "deny", priority = -1 }
+
+# Additional strict warnings
+elided_lifetimes_in_paths = "warn"
+explicit_outlives_requirements = "deny"
+keyword_idents = { level = "deny", priority = -1 }
+let_underscore_drop = "deny"
+macro_use_extern_crate = "deny"
+meta_variable_misuse = "deny"
+missing_abi = "deny"
+non_ascii_idents = "deny"
+single_use_lifetimes = "warn"
+trivial_casts = "warn"
+trivial_numeric_casts = "warn"
+unit_bindings = "deny"
+# unused_crate_dependencies is disabled due to false positives with dev-dependencies
+unused_extern_crates = "deny"
+unused_lifetimes = "warn"
+unused_macro_rules = "deny"
+unused_qualifications = "warn"
+variant_size_differences = "warn"
+
+[lints.clippy]
+# Start with strict lint groups
+pedantic = { level = "warn", priority = -1 }
+nursery = { level = "warn", priority = -1 }
+
+# Deny high-value lints that catch real bugs
+unused_self = "deny"
+unused_async = "deny"
+redundant_clone = "deny"
+redundant_closure = "deny"
+redundant_else = "deny"
+macro_use_imports = "deny"
+
+# Correctness lints (upgrade to deny)
+clone_on_ref_ptr = "deny"
+dbg_macro = "deny"
+empty_drop = "deny"
+empty_structs_with_brackets = "deny"
+exit = "deny"
+float_cmp_const = "deny"
+fn_to_numeric_cast_any = "deny"
+get_unwrap = "deny"
+if_then_some_else_none = "deny"
+lossy_float_literal = "deny"
+mem_forget = "deny"
+mixed_read_write_in_expression = "deny"
+panic_in_result_fn = "deny"
+print_stderr = "warn"
+print_stdout = "warn"
+rc_buffer = "deny"
+rc_mutex = "deny"
+rest_pat_in_fully_bound_structs = "deny"
+self_named_module_files = "deny"
+str_to_string = "warn"
+string_add = "deny"
+# string_to_string removed in favor of implicit_clone
+todo = "warn"
+try_err = "deny"
+undocumented_unsafe_blocks = "deny"
+unimplemented = "warn"
+unnecessary_self_imports = "deny"
+unneeded_field_pattern = "deny"
+unwrap_used = "warn"
+use_debug = "warn"
+verbose_file_reads = "deny"
+
+# Performance lints (upgrade to deny)
+inefficient_to_string = "deny"
+needless_collect = "deny"
+needless_pass_by_value = "warn"
+needless_pass_by_ref_mut = "warn"
+trivially_copy_pass_by_ref = "warn"
+
+# Style enforcement (upgrade to deny where sensible)
+cloned_instead_of_copied = "deny"
+flat_map_option = "deny"
+manual_ok_or = "deny"
+manual_string_new = "deny"
+map_unwrap_or = "deny"
+match_same_arms = "deny"
+needless_continue = "deny"
+needless_for_each = "deny"
+option_option = "deny"
+range_plus_one = "deny"
+redundant_pub_crate = "deny"
+semicolon_if_nothing_returned = "deny"
+string_add_assign = "deny"
+unnested_or_patterns = "deny"
+unreadable_literal = "deny"
+used_underscore_binding = "deny"
+
+# Complexity warnings
+cognitive_complexity = "warn"
+too_many_lines = "warn"
+missing_const_for_fn = "warn"
+similar_names = "warn"
+
+# Documentation
+missing_errors_doc = "warn"
+missing_panics_doc = "warn"
+
+# Additional useful lints
+assertions_on_result_states = "warn"
+checked_conversions = "deny"
+create_dir = "warn"
+default_union_representation = "deny"
+deref_by_slicing = "warn"
+empty_line_after_doc_comments = "warn"
+empty_line_after_outer_attr = "warn"
+equatable_if_let = "warn"
+filter_map_next = "deny"
+format_push_string = "warn"
+from_iter_instead_of_collect = "deny"
+if_not_else = "warn"
+implicit_clone = "warn"
+implicit_hasher = "warn"
+index_refutable_slice = "warn"
+# ineffassign is not a valid clippy lint (removed)
+iter_not_returning_iterator = "deny"
+large_types_passed_by_value = "warn"
+let_underscore_must_use = "warn"
+manual_assert = "deny"
+manual_instant_elapsed = "deny"
+manual_let_else = "warn"
+match_bool = "warn"
+# match_on_vec_items removed in favor of indexing_slicing
+match_wild_err_arm = "deny"
+mismatching_type_param_order = "warn"
+missing_fields_in_debug = "warn"
+mut_mut = "deny"
+mutex_atomic = "deny"
+naive_bytecount = "deny"
+needless_bitwise_bool = "deny"
+needless_raw_string_hashes = "deny"
+negative_feature_names = "deny"
+no_mangle_with_rust_abi = "deny"
+nonstandard_macro_braces = "warn"
+option_as_ref_cloned = "deny"
+path_buf_push_overwrite = "deny"
+ptr_as_ptr = "warn"
+ptr_cast_constness = "warn"
+pub_underscore_fields = "deny"
+range_minus_one = "deny"
+read_zero_byte_vec = "deny"
+redundant_closure_for_method_calls = "deny"
+redundant_feature_names = "deny"
+ref_as_ptr = "warn"
+ref_option_ref = "deny"
+return_self_not_must_use = "warn"
+same_functions_in_if_condition = "deny"
+same_name_method = "warn"
+semicolon_outside_block = "warn"
+stable_sort_primitive = "deny"
+string_lit_chars_any = "deny"
+suspicious_xor_used_as_pow = "deny"
+trailing_empty_array = "deny"
+transmute_ptr_to_ptr = "deny"
+type_repetition_in_bounds = "warn"
+unicode_not_nfc = "deny"
+uninlined_format_args = "warn"
+unnecessary_join = "deny"
+unnecessary_wraps = "warn"
+unused_peekable = "deny"
+unused_rounding = "deny"
+use_self = "warn"
+useless_let_if_seq = "warn"
+wildcard_dependencies = "deny"
+zero_sized_map_values = "warn"
+
+# Allow specific pedantic lints that are too noisy for this project
+must_use_candidate = "allow"
+module_name_repetitions = "allow"
+struct_excessive_bools = "allow"
+doc_markdown = "allow"

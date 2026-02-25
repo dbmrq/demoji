@@ -15,4 +15,4 @@ pub use emoji::EmojiDetector;
 pub use error::{DemojiError, DemojiResult};
 pub use processor::{FileProcessor, ProcessingResult};
 pub use replacer::{EmojiReplacer, ReplacementMode};
-pub use walker::DirectoryWalker;
+pub use walker::{default_ignore_patterns, DirectoryWalker, DEFAULT_IGNORE_PATTERNS};

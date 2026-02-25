@@ -1,12 +1,12 @@
 # Rust build artifacts
 /target/
-Cargo.lock
 
-# IDE
+# IDE and tools
 .idea/
 *.swp
 *.swo
 .vscode/
+.villalobos/
 
 # OS
 .DS_Store

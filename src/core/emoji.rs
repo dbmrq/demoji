@@ -6,14 +6,13 @@
 
 /// Detects emoji characters in text
 #[derive(Debug, Clone)]
-pub struct EmojiDetector {
-    // Currently stateless, but could be extended with configuration
-}
+pub struct EmojiDetector;
 
 impl EmojiDetector {
     /// Creates a new emoji detector
-    pub fn new() -> Self {
-        Self {}
+    #[must_use]
+    pub const fn new() -> Self {
+        Self
     }
 
     /// Finds all emoji matches in the given text
@@ -35,27 +34,27 @@ impl EmojiDetector {
         let mut chars = text.char_indices().peekable();
 
         while let Some((start_idx, ch)) = chars.next() {
-            if self.is_emoji_start(ch) || ch.is_ascii_digit() {
+            if Self::is_emoji_start(ch) || ch.is_ascii_digit() {
                 // Collect the full emoji sequence
                 let mut end_idx = start_idx + ch.len_utf8();
                 let mut emoji_chars = vec![ch];
-                let is_regional = self.is_regional_indicator(ch);
+                let is_regional = Self::is_regional_indicator(ch);
                 let is_digit = ch.is_ascii_digit();
 
                 // Look ahead for modifiers, ZWJ sequences, regional indicators, and keycap sequences
                 while let Some(&(next_idx, next_ch)) = chars.peek() {
                     let should_continue = if is_regional && emoji_chars.len() == 1 {
                         // After first regional indicator, expect second one
-                        self.is_regional_indicator(next_ch)
+                        Self::is_regional_indicator(next_ch)
                     } else if is_digit && emoji_chars.len() == 1 {
                         // After digit, expect variation selector or keycap
-                        self.is_emoji_modifier(next_ch)
-                    } else if self.is_zwj(emoji_chars.last().copied().unwrap_or('\0')) {
+                        Self::is_emoji_modifier(next_ch)
+                    } else if Self::is_zwj(emoji_chars.last().copied().unwrap_or('\0')) {
                         // After ZWJ, the next character is part of the sequence
                         true
                     } else {
                         // Otherwise, check for modifiers and ZWJ
-                        self.is_emoji_modifier(next_ch) || self.is_zwj(next_ch)
+                        Self::is_emoji_modifier(next_ch) || Self::is_zwj(next_ch)
                     };
 
                     if should_continue {
@@ -76,7 +75,7 @@ impl EmojiDetector {
                         emoji: emoji_str,
                         line: text[..start_idx].matches('\n').count() + 1,
                         column: start_idx
-                            - text[..start_idx].rfind('\n').map(|i| i + 1).unwrap_or(0)
+                            - text[..start_idx].rfind('\n').map_or(0, |i| i + 1)
                             + 1,
                     });
                 }
@@ -98,12 +97,12 @@ impl EmojiDetector {
     /// assert!(!detector.contains_emoji("Hello World"));
     /// ```
     pub fn contains_emoji(&self, text: &str) -> bool {
-        text.chars().any(|ch| self.is_emoji_start(ch))
+        text.chars().any(Self::is_emoji_start)
     }
 
     /// Checks if a character is the start of an emoji
-    fn is_emoji_start(&self, ch: char) -> bool {
-        self.is_emoji_presentation(ch) || self.is_regional_indicator(ch)
+    const fn is_emoji_start(ch: char) -> bool {
+        Self::is_emoji_presentation(ch) || Self::is_regional_indicator(ch)
     }
 
     /// Checks if a character has emoji presentation
@@ -121,7 +120,7 @@ impl EmojiDetector {
     /// - Enclosed Alphanumerics (U+2460..U+24FF)
     /// - Geometric Shapes (U+25A0..U+25FF)
     /// - Miscellaneous Technical (U+2300..U+23FF)
-    fn is_emoji_presentation(&self, ch: char) -> bool {
+    const fn is_emoji_presentation(ch: char) -> bool {
         matches!(ch,
             '\u{1F300}'..='\u{1F9FF}' |  // Main emoji blocks
             '\u{1FA00}'..='\u{1FAFF}' |  // Extended emoji
@@ -153,14 +152,14 @@ impl EmojiDetector {
     ///
     /// Regional indicators are used in pairs to create flag emojis.
     /// For example, 🇺🇸 is U+1F1FA U+1F1F8 (U + S)
-    fn is_regional_indicator(&self, ch: char) -> bool {
+    const fn is_regional_indicator(ch: char) -> bool {
         matches!(ch, '\u{1F1E6}'..='\u{1F1FF}')
     }
 
     /// Checks if a character is an emoji modifier (skin tone)
     ///
     /// Skin tone modifiers: U+1F3FB..U+1F3FF
-    fn is_emoji_modifier(&self, ch: char) -> bool {
+    const fn is_emoji_modifier(ch: char) -> bool {
         matches!(ch, '\u{1F3FB}'..='\u{1F3FF}' | '\u{FE0F}' | '\u{20E3}')
     }
 
@@ -168,7 +167,7 @@ impl EmojiDetector {
     ///
     /// ZWJ is used to combine multiple emojis into a single glyph,
     /// such as family emojis (👨‍👩‍👧) or profession emojis (👨‍⚕️)
-    fn is_zwj(&self, ch: char) -> bool {
+    const fn is_zwj(ch: char) -> bool {
         ch == '\u{200D}'
     }
 }
@@ -196,12 +195,14 @@ pub struct EmojiMatch {
 
 impl EmojiMatch {
     /// Returns the length of the emoji in bytes
-    pub fn len(&self) -> usize {
+    #[must_use]
+    pub const fn len(&self) -> usize {
         self.end - self.start
     }
 
     /// Returns true if this is an empty match (should not happen in practice)
-    pub fn is_empty(&self) -> bool {
+    #[must_use]
+    pub const fn is_empty(&self) -> bool {
         self.start == self.end
     }
 
@@ -212,6 +213,7 @@ impl EmojiMatch {
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used, clippy::default_constructed_unit_structs)]
 mod tests {
     use super::*;
 
@@ -493,10 +495,10 @@ fn main() {
     #[test]
     fn test_emoji_in_multiline_comment() {
         let detector = EmojiDetector::new();
-        let code = r#"
+        let code = r"
 /* This function is broken 💔
    and needs fixing 🔧
-*/"#;
+*/";
         let matches = detector.find_all(code);
         assert_eq!(matches.len(), 2);
         assert_eq!(matches[0].emoji, "💔");
@@ -530,13 +532,13 @@ def process():
     #[test]
     fn test_emoji_in_markdown() {
         let detector = EmojiDetector::new();
-        let markdown = r#"
+        let markdown = r"
 # Project Status 📊
 
 - [x] Feature A ✅
 - [ ] Feature B 🚧
 - [x] Bug fix 🐛
-"#;
+";
         let matches = detector.find_all(markdown);
         assert_eq!(matches.len(), 4);
     }

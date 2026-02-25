@@ -5,11 +5,11 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/yourusername/demoji.git"
+    "url": "https://github.com/dbmrq/demoji.git"
   },
-  "homepage": "https://github.com/yourusername/demoji",
+  "homepage": "https://github.com/dbmrq/demoji",
   "bugs": {
-    "url": "https://github.com/yourusername/demoji/issues"
+    "url": "https://github.com/dbmrq/demoji/issues"
   },
   "keywords": [
     "emoji",

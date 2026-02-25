@@ -1,3 +1,7 @@
+//! CLI entry point for demoji.
+
+#![allow(clippy::print_stderr, missing_docs)]
+
 use clap::Parser;
 use demoji::cli::args::Args;
 use demoji::config::Config;
@@ -9,7 +13,7 @@ fn main() {
     let args = match Args::try_parse() {
         Ok(args) => args,
         Err(e) => {
-            eprintln!("{}", e);
+            eprintln!("{e}");
             std::process::exit(2);
         }
     };
@@ -22,14 +26,14 @@ fn main() {
             if let Some(demoji_err) = e.downcast_ref::<DemojiError>() {
                 eprintln!("{}", demoji_err.user_message());
             } else {
-                eprintln!("Error: Failed to load configuration: {}", e);
+                eprintln!("Error: Failed to load configuration: {e}");
             }
             std::process::exit(2);
         }
     };
 
     // Run the application and get exit code
-    match run(args, config) {
+    match run(&args, &config) {
         Ok(exit_code) => {
             std::process::exit(exit_code);
         }
@@ -38,7 +42,7 @@ fn main() {
             if let Some(demoji_err) = e.downcast_ref::<DemojiError>() {
                 eprintln!("{}", demoji_err.user_message());
             } else {
-                eprintln!("Error: {}", e);
+                eprintln!("Error: {e}");
             }
             std::process::exit(2);
         }

@@ -7,6 +7,52 @@ use anyhow::Result;
 use ignore::WalkBuilder;
 use std::path::{Path, PathBuf};
 
+/// Default ignore patterns for binary files and common directories.
+///
+/// This is the single source of truth for ignore patterns used by both
+/// `DirectoryWalker` and `Config::default()`.
+pub const DEFAULT_IGNORE_PATTERNS: &[&str] = &[
+    // Binary file extensions
+    "*.png",
+    "*.jpg",
+    "*.jpeg",
+    "*.gif",
+    "*.ico",
+    "*.woff",
+    "*.woff2",
+    "*.ttf",
+    "*.otf",
+    "*.exe",
+    "*.dll",
+    "*.so",
+    "*.dylib",
+    "*.zip",
+    "*.tar",
+    "*.gz",
+    "*.bz2",
+    "*.xz",
+    "*.7z",
+    "*.rar",
+    "*.pdf",
+    "*.mp4",
+    "*.mp3",
+    "*.wav",
+    // Directories
+    ".git",
+    "node_modules",
+    "target",
+    "build",
+    "dist",
+    ".next",
+    "__pycache__",
+    ".venv",
+    "venv",
+    "vendor",
+    ".vscode",
+    ".idea",
+    ".DS_Store",
+];
+
 /// Walks directories and processes files
 ///
 /// Uses the `ignore` crate for gitignore support and provides filtering
@@ -31,49 +77,8 @@ impl DirectoryWalker {
         Self {
             root: root.to_path_buf(),
             extensions: Vec::new(),
-            ignore_patterns: Self::default_ignore_patterns(),
+            ignore_patterns: default_ignore_patterns(),
         }
-    }
-
-    /// Returns the default ignore patterns
-    ///
-    /// Includes binary file extensions and common directories to skip.
-    pub fn default_ignore_patterns() -> Vec<String> {
-        vec![
-            // Binary file extensions
-            "*.png".to_string(),
-            "*.jpg".to_string(),
-            "*.jpeg".to_string(),
-            "*.gif".to_string(),
-            "*.ico".to_string(),
-            "*.woff".to_string(),
-            "*.woff2".to_string(),
-            "*.ttf".to_string(),
-            "*.otf".to_string(),
-            "*.exe".to_string(),
-            "*.dll".to_string(),
-            "*.so".to_string(),
-            "*.dylib".to_string(),
-            "*.zip".to_string(),
-            "*.tar".to_string(),
-            "*.gz".to_string(),
-            "*.bz2".to_string(),
-            "*.7z".to_string(),
-            "*.rar".to_string(),
-            // Directories
-            ".git".to_string(),
-            "node_modules".to_string(),
-            "target".to_string(),
-            "build".to_string(),
-            "dist".to_string(),
-            ".next".to_string(),
-            "__pycache__".to_string(),
-            ".venv".to_string(),
-            "vendor".to_string(),
-            ".vscode".to_string(),
-            ".idea".to_string(),
-            ".DS_Store".to_string(),
-        ]
     }
 
     /// Sets the file extensions to process
@@ -83,6 +88,7 @@ impl DirectoryWalker {
     ///
     /// # Arguments
     /// * `extensions` - List of file extensions to process (e.g., vec!["rs", "py", "js"])
+    #[must_use]
     pub fn with_extensions(mut self, extensions: Vec<String>) -> Self {
         self.extensions = extensions;
         self
@@ -95,6 +101,7 @@ impl DirectoryWalker {
     ///
     /// # Arguments
     /// * `patterns` - Additional patterns to ignore
+    #[must_use]
     pub fn with_ignore_patterns(mut self, patterns: Vec<String>) -> Self {
         self.ignore_patterns.extend(patterns);
         self
@@ -136,7 +143,7 @@ impl DirectoryWalker {
                     if !extensions.is_empty() {
                         if let Some(ext) = path.extension() {
                             if let Some(ext_str) = ext.to_str() {
-                                if !extensions.contains(&ext_str.to_string()) {
+                                if !extensions.contains(&ext_str.to_owned()) {
                                     return None;
                                 }
                             } else {
@@ -152,7 +159,7 @@ impl DirectoryWalker {
                 Err(e) => {
                     // Convert walk errors to DemojiError with helpful message
                     let err = DemojiError::WalkError {
-                        message: format!("Failed to read directory entry: {}", e),
+                        message: format!("Failed to read directory entry: {e}"),
                     };
                     Some(Err(err.into()))
                 }
@@ -165,6 +172,13 @@ impl Default for DirectoryWalker {
     fn default() -> Self {
         Self::new(Path::new("."))
     }
+}
+
+/// Returns the default ignore patterns as a Vec<String>
+///
+/// Converts the static DEFAULT_IGNORE_PATTERNS slice to owned strings.
+pub fn default_ignore_patterns() -> Vec<String> {
+    DEFAULT_IGNORE_PATTERNS.iter().map(|s| (*s).to_owned()).collect()
 }
 
 /// Checks if a path should be ignored based on patterns
@@ -206,6 +220,14 @@ fn should_ignore_path(path: &Path, patterns: &[String]) -> bool {
 }
 
 #[cfg(test)]
+#[allow(
+    clippy::unwrap_used,
+    clippy::str_to_string,
+    clippy::redundant_closure_for_method_calls,
+    clippy::needless_collect,
+    clippy::create_dir,
+    clippy::uninlined_format_args
+)]
 mod tests {
     use super::*;
     use std::fs;
@@ -243,7 +265,7 @@ mod tests {
 
     #[test]
     fn test_default_ignore_patterns_includes_binary_extensions() {
-        let patterns = DirectoryWalker::default_ignore_patterns();
+        let patterns = default_ignore_patterns();
         assert!(patterns.contains(&"*.png".to_string()));
         assert!(patterns.contains(&"*.jpg".to_string()));
         assert!(patterns.contains(&"*.exe".to_string()));
@@ -251,7 +273,7 @@ mod tests {
 
     #[test]
     fn test_default_ignore_patterns_includes_directories() {
-        let patterns = DirectoryWalker::default_ignore_patterns();
+        let patterns = default_ignore_patterns();
         assert!(patterns.contains(&".git".to_string()));
         assert!(patterns.contains(&"node_modules".to_string()));
         assert!(patterns.contains(&"target".to_string()));
@@ -398,7 +420,7 @@ mod tests {
         let files: Vec<_> = walker.walk().filter_map(|r| r.ok()).collect();
         // Note: .gitignore is only respected if we're in a git repo
         // For this test, we just verify the walker works
-        assert!(files.len() >= 1);
+        assert!(!files.is_empty());
     }
 
     #[test]
@@ -524,7 +546,7 @@ mod tests {
         // Note: symlink creation might fail on some systems, so we just test the walker works
         let walker = DirectoryWalker::new(temp_dir.path());
         let files: Vec<_> = walker.walk().filter_map(|r| r.ok()).collect();
-        assert!(files.len() >= 1);
+        assert!(!files.is_empty());
     }
 
     #[test]

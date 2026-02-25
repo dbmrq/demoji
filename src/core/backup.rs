@@ -2,6 +2,9 @@
 //!
 //! Handles creating and managing backup files before modifications.
 
+// Allow cfg blocks with trailing statements inside
+#![allow(clippy::semicolon_outside_block)]
+
 use anyhow::{Context, Result};
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -20,7 +23,7 @@ impl BackupManager {
     /// Creates a new backup manager with default settings
     ///
     /// By default, backups are created in the same directory as the original file.
-    pub fn new() -> Self {
+    pub const fn new() -> Self {
         Self { backup_dir: None }
     }
 
@@ -191,32 +194,29 @@ impl BackupManager {
     /// If a backup directory is configured, the backup is placed there with the same filename.
     /// Otherwise, the backup is placed in the same directory as the original with a `.bak` extension.
     fn get_backup_path(&self, file_path: &Path) -> Result<PathBuf> {
-        match &self.backup_dir {
-            Some(backup_dir) => {
-                let file_name = file_path
-                    .file_name()
-                    .ok_or_else(|| anyhow::anyhow!("Invalid file path: {}", file_path.display()))?;
-                // Append .bak to the filename
-                let backup_name = format!("{}.bak", file_name.to_string_lossy());
-                Ok(backup_dir.join(backup_name))
-            }
-            None => {
-                // Backup in same directory as original
-                let mut backup_path = file_path.to_path_buf();
-                let current_ext = backup_path
-                    .extension()
-                    .map(|ext| ext.to_string_lossy().to_string())
-                    .unwrap_or_default();
+        if let Some(backup_dir) = &self.backup_dir {
+            let file_name = file_path
+                .file_name()
+                .ok_or_else(|| anyhow::anyhow!("Invalid file path: {}", file_path.display()))?;
+            // Append .bak to the filename
+            let backup_name = format!("{}.bak", file_name.to_string_lossy());
+            Ok(backup_dir.join(backup_name))
+        } else {
+            // Backup in same directory as original
+            let mut backup_path = file_path.to_path_buf();
+            let current_ext = backup_path
+                .extension()
+                .map(|ext| ext.to_string_lossy().to_string())
+                .unwrap_or_default();
 
-                if current_ext.is_empty() {
-                    backup_path.set_extension("bak");
-                } else {
-                    let new_ext = format!("{}.bak", current_ext);
-                    backup_path.set_extension(new_ext);
-                }
-
-                Ok(backup_path)
+            if current_ext.is_empty() {
+                backup_path.set_extension("bak");
+            } else {
+                let new_ext = format!("{current_ext}.bak");
+                backup_path.set_extension(new_ext);
             }
+
+            Ok(backup_path)
         }
     }
 }
@@ -228,6 +228,11 @@ impl Default for BackupManager {
 }
 
 #[cfg(test)]
+#[allow(
+    clippy::unwrap_used,
+    clippy::assertions_on_result_states,
+    clippy::create_dir
+)]
 mod tests {
     use super::*;
     use tempfile::TempDir;
@@ -419,7 +424,7 @@ mod tests {
         fs::write(backup_dir.join("other.rs"), "code").unwrap();
 
         let manager = BackupManager::with_backup_dir(&backup_dir);
-        let deleted = manager.cleanup_backups(Duration::from_secs(0)).unwrap();
+        let _deleted = manager.cleanup_backups(Duration::from_secs(0)).unwrap();
 
         // Should only process .bak files
         assert!(backup_dir.join("test.txt").exists());

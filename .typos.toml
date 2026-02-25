@@ -1,0 +1,22 @@
+# Typos configuration
+# https://github.com/crate-ci/typos
+
+[files]
+extend-exclude = [
+    "*.lock",
+    "target/",
+    "*.bak",
+    "tests/fixtures/",
+]
+
+[default]
+extend-ignore-identifiers-re = [
+    # Common abbreviations in code
+    "idents?",
+    "Ser",
+]
+
+[default.extend-words]
+# Project-specific words that should not be flagged
+demoji = "demoji"
+

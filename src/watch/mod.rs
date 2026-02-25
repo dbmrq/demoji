@@ -11,7 +11,7 @@ use std::sync::mpsc;
 use std::time::Duration;
 
 use crate::cli::output::Reporter;
-use crate::core::DirectoryWalker;
+use crate::core::default_ignore_patterns;
 
 /// Watches files for changes and processes them
 ///
@@ -34,17 +34,21 @@ impl FileWatcher {
     /// ```ignore
     /// let watcher = FileWatcher::new(vec![PathBuf::from("./src")])?;
     /// ```
+    ///
+    /// # Errors
+    /// This method is currently infallible, but returns Result for future extensibility.
     pub fn new(paths: Vec<PathBuf>) -> Result<Self> {
         Ok(Self {
             paths,
             extensions: Vec::new(),
-            ignore_patterns: DirectoryWalker::default_ignore_patterns(),
+            ignore_patterns: default_ignore_patterns(),
         })
     }
 
     /// Sets the file extensions to process
     ///
     /// If empty, all files are processed (except ignored ones).
+    #[must_use]
     pub fn with_extensions(mut self, extensions: Vec<String>) -> Self {
         self.extensions = extensions;
         self
@@ -53,6 +57,7 @@ impl FileWatcher {
     /// Adds custom ignore patterns
     ///
     /// Patterns are added to the default ignore patterns.
+    #[must_use]
     pub fn with_ignore_patterns(mut self, patterns: Vec<String>) -> Self {
         self.ignore_patterns.extend(patterns);
         self
@@ -65,8 +70,11 @@ impl FileWatcher {
     /// results are reported using the provided Reporter.
     ///
     /// # Arguments
-    /// * `processor` - FileProcessor to use for processing changed files
+    /// * `processor` - `FileProcessor` to use for processing changed files
     /// * `reporter` - Reporter to use for reporting results
+    ///
+    /// # Errors
+    /// Returns an error if file watching or processing fails.
     pub fn start(
         &self,
         _processor: &crate::core::FileProcessor,
@@ -103,7 +111,10 @@ impl FileWatcher {
                     // For now, just acknowledge the events
                 }
                 Ok(Err(e)) => {
-                    eprintln!("Watch error: {}", e);
+                    #[allow(clippy::print_stderr)]
+                    {
+                        eprintln!("Watch error: {e}");
+                    }
                 }
                 Err(_) => {
                     // Channel closed, exit gracefully
@@ -176,6 +187,7 @@ impl FileWatcher {
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used, clippy::str_to_string)]
 mod tests {
     use super::*;
 

@@ -2,6 +2,13 @@
 //!
 //! These tests verify the CLI behavior with various arguments, exit codes, and output.
 
+#![allow(
+    deprecated,
+    clippy::unwrap_used,
+    clippy::let_underscore_must_use,
+    let_underscore_drop
+)]
+
 use assert_cmd::Command;
 use predicates::prelude::*;
 use std::fs;

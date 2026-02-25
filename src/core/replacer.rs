@@ -3,6 +3,9 @@
 //! Defines different modes for handling detected emojis and provides
 //! comprehensive ASCII mappings for common emoji characters.
 
+// Allow str_to_string in this module due to extensive emoji mapping initialization
+#![allow(clippy::str_to_string)]
+
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
@@ -10,10 +13,12 @@ use std::collections::HashMap;
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
 #[serde(rename_all = "lowercase")]
 pub enum ReplacementMode {
-    /// Remove emoji characters entirely
+    /// Smart mode: replace functional emojis with ASCII, remove decorative ones (default)
     #[default]
+    Smart,
+    /// Remove emoji characters entirely
     Remove,
-    /// Replace with ASCII alternatives
+    /// Replace with ASCII alternatives (all mapped emojis)
     Replace,
     /// Replace with a configurable placeholder
     Placeholder,
@@ -62,11 +67,13 @@ impl AsciiReplacer {
     }
 
     /// Creates a new ASCII replacer with a custom mapping
-    pub fn with_mapping(mapping: HashMap<String, String>) -> Self {
+    #[must_use]
+    pub const fn with_mapping(mapping: HashMap<String, String>) -> Self {
         Self { mapping }
     }
 
     /// Builds the default emoji-to-ASCII mapping
+    #[allow(clippy::too_many_lines)]
     fn build_default_mapping() -> HashMap<String, String> {
         let mut map = HashMap::new();
 
@@ -334,13 +341,13 @@ impl AsciiReplacer {
 
     /// Get the ASCII replacement for an emoji, if available
     pub fn get_replacement(&self, emoji: &str) -> Option<&str> {
-        self.mapping.get(emoji).map(|s| s.as_str())
+        self.mapping.get(emoji).map(String::as_str)
     }
 }
 
 impl EmojiReplacer for AsciiReplacer {
     fn replace(&self, emoji: &str) -> Option<String> {
-        self.get_replacement(emoji).map(|s| s.to_string())
+        self.get_replacement(emoji).map(ToString::to_string)
     }
 }
 
@@ -371,22 +378,167 @@ impl EmojiReplacer for PlaceholderReplacer {
     }
 }
 
+/// Replacer that replaces functional emojis with ASCII and removes decorative ones
+///
+/// "Functional" emojis are those that convey meaning in code contexts:
+/// - Checkmarks, X marks, and status indicators
+/// - Warnings and alerts
+/// - Arrows and directional indicators
+/// - Common development symbols (bug, rocket, etc.)
+///
+/// Decorative emojis (faces, animals, food, etc.) are simply removed.
+#[derive(Debug)]
+pub struct SmartReplacer {
+    mapping: HashMap<String, String>,
+}
+
+impl Default for SmartReplacer {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl SmartReplacer {
+    /// Creates a new smart replacer with functional emoji mappings
+    pub fn new() -> Self {
+        Self {
+            mapping: Self::build_functional_mapping(),
+        }
+    }
+
+    /// Builds the functional emoji-to-ASCII mapping
+    ///
+    /// Only includes emojis that have clear functional meaning in code:
+    /// - Status indicators (checkmarks, X marks)
+    /// - Warnings and alerts
+    /// - Arrows and directions
+    /// - Common dev symbols
+    fn build_functional_mapping() -> HashMap<String, String> {
+        let mut map = HashMap::new();
+
+        // Checkmarks and success indicators
+        map.insert("✅".to_string(), "[OK]".to_string());
+        map.insert("✓".to_string(), "[v]".to_string());
+        map.insert("✔".to_string(), "[v]".to_string());
+        map.insert("☑".to_string(), "[v]".to_string());
+        map.insert("🗹".to_string(), "[v]".to_string());
+        map.insert("👍".to_string(), "[+1]".to_string());
+
+        // X marks and failure indicators
+        map.insert("❌".to_string(), "[X]".to_string());
+        map.insert("✗".to_string(), "[X]".to_string());
+        map.insert("✘".to_string(), "[X]".to_string());
+        map.insert("☒".to_string(), "[X]".to_string());
+        map.insert("👎".to_string(), "[-1]".to_string());
+
+        // Warning and alert symbols
+        map.insert("⚠".to_string(), "[!]".to_string());
+        map.insert("⚠️".to_string(), "[!]".to_string());
+        map.insert("‼".to_string(), "[!!]".to_string());
+        map.insert("‼️".to_string(), "[!!]".to_string());
+        map.insert("❗".to_string(), "[!]".to_string());
+        map.insert("❕".to_string(), "[!]".to_string());
+        map.insert("❓".to_string(), "[?]".to_string());
+        map.insert("❔".to_string(), "[?]".to_string());
+        map.insert("⁉".to_string(), "[!?]".to_string());
+        map.insert("⁉️".to_string(), "[!?]".to_string());
+        map.insert("🚫".to_string(), "[no]".to_string());
+        map.insert("⛔".to_string(), "[stop]".to_string());
+        map.insert("🛑".to_string(), "[stop]".to_string());
+
+        // Arrows
+        map.insert("➡".to_string(), "->".to_string());
+        map.insert("➡️".to_string(), "->".to_string());
+        map.insert("⬅".to_string(), "<-".to_string());
+        map.insert("⬅️".to_string(), "<-".to_string());
+        map.insert("⬆".to_string(), "^".to_string());
+        map.insert("⬆️".to_string(), "^".to_string());
+        map.insert("⬇".to_string(), "v".to_string());
+        map.insert("⬇️".to_string(), "v".to_string());
+        map.insert("↔".to_string(), "<->".to_string());
+        map.insert("↔️".to_string(), "<->".to_string());
+        map.insert("↕".to_string(), "^v".to_string());
+        map.insert("↕️".to_string(), "^v".to_string());
+        map.insert("🔄".to_string(), "[refresh]".to_string());
+        map.insert("🔃".to_string(), "[reload]".to_string());
+
+        // Common development symbols
+        map.insert("🐛".to_string(), "[bug]".to_string());
+        map.insert("🐞".to_string(), "[bug]".to_string());
+        map.insert("🚀".to_string(), "[rocket]".to_string());
+        map.insert("💡".to_string(), "[idea]".to_string());
+        map.insert("🔥".to_string(), "[fire]".to_string());
+        map.insert("💥".to_string(), "[boom]".to_string());
+        map.insert("⚡".to_string(), "[zap]".to_string());
+        map.insert("⚡️".to_string(), "[zap]".to_string());
+        map.insert("📝".to_string(), "[memo]".to_string());
+        map.insert("📋".to_string(), "[clipboard]".to_string());
+        map.insert("🔧".to_string(), "[wrench]".to_string());
+        map.insert("🔨".to_string(), "[hammer]".to_string());
+        map.insert("⚙".to_string(), "[gear]".to_string());
+        map.insert("⚙️".to_string(), "[gear]".to_string());
+        map.insert("🔗".to_string(), "[link]".to_string());
+        map.insert("🔒".to_string(), "[lock]".to_string());
+        map.insert("🔓".to_string(), "[unlock]".to_string());
+        map.insert("🔑".to_string(), "[key]".to_string());
+        map.insert("🔍".to_string(), "[search]".to_string());
+        map.insert("📦".to_string(), "[package]".to_string());
+        map.insert("🏷".to_string(), "[tag]".to_string());
+        map.insert("🏷️".to_string(), "[tag]".to_string());
+        map.insert("📌".to_string(), "[pin]".to_string());
+        map.insert("📍".to_string(), "[pin]".to_string());
+        map.insert("🎯".to_string(), "[target]".to_string());
+        map.insert("💯".to_string(), "[100]".to_string());
+        map.insert("⭐".to_string(), "[*]".to_string());
+        map.insert("🌟".to_string(), "[*]".to_string());
+        map.insert("✨".to_string(), "[sparkle]".to_string());
+
+        // Info and communication
+        map.insert("ℹ".to_string(), "[i]".to_string());
+        map.insert("ℹ️".to_string(), "[i]".to_string());
+        map.insert("🔔".to_string(), "[bell]".to_string());
+        map.insert("🔕".to_string(), "[no bell]".to_string());
+        map.insert("📢".to_string(), "[announce]".to_string());
+        map.insert("📣".to_string(), "[megaphone]".to_string());
+
+        map
+    }
+
+    /// Get the ASCII replacement for a functional emoji, if available
+    pub fn get_replacement(&self, emoji: &str) -> Option<&str> {
+        self.mapping.get(emoji).map(String::as_str)
+    }
+}
+
+impl EmojiReplacer for SmartReplacer {
+    fn replace(&self, emoji: &str) -> Option<String> {
+        // If it's a functional emoji, replace it; otherwise remove it (return None)
+        self.get_replacement(emoji).map(ToString::to_string)
+    }
+}
+
 /// Creates an emoji replacer based on the replacement mode
 pub fn create_replacer(mode: ReplacementMode, placeholder: Option<&str>) -> Box<dyn EmojiReplacer> {
     match mode {
+        ReplacementMode::Smart => Box::new(SmartReplacer::new()),
         ReplacementMode::Remove => Box::new(RemoveReplacer),
         ReplacementMode::Replace => Box::new(AsciiReplacer::new()),
         ReplacementMode::Placeholder => {
-            if let Some(p) = placeholder {
-                Box::new(PlaceholderReplacer::new(p))
-            } else {
-                Box::new(PlaceholderReplacer::default())
-            }
+            let replacer: Box<dyn EmojiReplacer> = placeholder.map_or_else(
+                || Box::new(PlaceholderReplacer::default()),
+                |p| Box::new(PlaceholderReplacer::new(p)),
+            );
+            replacer
         }
     }
 }
 
 #[cfg(test)]
+#[allow(
+    let_underscore_drop,
+    clippy::manual_string_new,
+    clippy::uninlined_format_args
+)]
 mod tests {
     use super::*;
 
@@ -546,7 +698,7 @@ mod tests {
 
     #[test]
     fn test_replacement_mode_default() {
-        assert_eq!(ReplacementMode::default(), ReplacementMode::Remove);
+        assert_eq!(ReplacementMode::default(), ReplacementMode::Smart);
     }
 
     #[test]
@@ -908,9 +1060,82 @@ mod tests {
     }
 
     #[test]
-    fn test_replacement_mode_default_is_remove() {
+    fn test_replacement_mode_default_is_smart() {
         let default_mode = ReplacementMode::default();
-        assert_eq!(default_mode, ReplacementMode::Remove);
+        assert_eq!(default_mode, ReplacementMode::Smart);
+    }
+
+    // ===== Smart Mode Tests =====
+
+    #[test]
+    fn test_smart_replacer_functional_checkmarks() {
+        let replacer = SmartReplacer::new();
+        assert_eq!(replacer.replace("✅"), Some("[OK]".to_string()));
+        assert_eq!(replacer.replace("✓"), Some("[v]".to_string()));
+        assert_eq!(replacer.replace("✔"), Some("[v]".to_string()));
+        assert_eq!(replacer.replace("👍"), Some("[+1]".to_string()));
+    }
+
+    #[test]
+    fn test_smart_replacer_functional_x_marks() {
+        let replacer = SmartReplacer::new();
+        assert_eq!(replacer.replace("❌"), Some("[X]".to_string()));
+        assert_eq!(replacer.replace("✗"), Some("[X]".to_string()));
+        assert_eq!(replacer.replace("👎"), Some("[-1]".to_string()));
+    }
+
+    #[test]
+    fn test_smart_replacer_functional_warnings() {
+        let replacer = SmartReplacer::new();
+        assert_eq!(replacer.replace("⚠️"), Some("[!]".to_string()));
+        assert_eq!(replacer.replace("❗"), Some("[!]".to_string()));
+        assert_eq!(replacer.replace("❓"), Some("[?]".to_string()));
+        assert_eq!(replacer.replace("🚫"), Some("[no]".to_string()));
+    }
+
+    #[test]
+    fn test_smart_replacer_functional_arrows() {
+        let replacer = SmartReplacer::new();
+        assert_eq!(replacer.replace("➡️"), Some("->".to_string()));
+        assert_eq!(replacer.replace("⬅️"), Some("<-".to_string()));
+        assert_eq!(replacer.replace("⬆️"), Some("^".to_string()));
+        assert_eq!(replacer.replace("⬇️"), Some("v".to_string()));
+    }
+
+    #[test]
+    fn test_smart_replacer_functional_dev_symbols() {
+        let replacer = SmartReplacer::new();
+        assert_eq!(replacer.replace("🐛"), Some("[bug]".to_string()));
+        assert_eq!(replacer.replace("🚀"), Some("[rocket]".to_string()));
+        assert_eq!(replacer.replace("💡"), Some("[idea]".to_string()));
+        assert_eq!(replacer.replace("🔥"), Some("[fire]".to_string()));
+        assert_eq!(replacer.replace("📦"), Some("[package]".to_string()));
+    }
+
+    #[test]
+    fn test_smart_replacer_removes_decorative_emojis() {
+        let replacer = SmartReplacer::new();
+        // Faces should be removed (return None)
+        assert_eq!(replacer.replace("😀"), None);
+        assert_eq!(replacer.replace("😊"), None);
+        assert_eq!(replacer.replace("🤣"), None);
+        // Animals should be removed
+        assert_eq!(replacer.replace("🐱"), None);
+        assert_eq!(replacer.replace("🐶"), None);
+        // Food should be removed
+        assert_eq!(replacer.replace("🍕"), None);
+        assert_eq!(replacer.replace("🎉"), None);
+    }
+
+    #[test]
+    fn test_create_replacer_smart_mode() {
+        let replacer = create_replacer(ReplacementMode::Smart, None);
+        // Functional emojis are replaced
+        assert_eq!(replacer.replace("✅"), Some("[OK]".to_string()));
+        assert_eq!(replacer.replace("🐛"), Some("[bug]".to_string()));
+        // Decorative emojis are removed
+        assert_eq!(replacer.replace("😀"), None);
+        assert_eq!(replacer.replace("🎉"), None);
     }
 
     #[test]
@@ -927,7 +1152,7 @@ mod tests {
 
     #[test]
     fn test_remove_replacer_default() {
-        let replacer = RemoveReplacer::default();
+        let replacer = RemoveReplacer;
         assert_eq!(replacer.replace("😀"), None);
     }
 

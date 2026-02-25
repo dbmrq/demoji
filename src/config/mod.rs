@@ -27,7 +27,7 @@ pub struct Config {
     #[serde(default = "default_placeholder")]
     pub placeholder: String,
 
-    /// File extensions to process (e.g., ["rs", "py", "js"])
+    /// File extensions to process (e.g., `["rs", "py", "js"]`)
     /// If empty, processes all text files
     pub extensions: Vec<String>,
 
@@ -42,7 +42,7 @@ pub struct Config {
 }
 
 fn default_placeholder() -> String {
-    "[EMOJI]".to_string()
+    "[EMOJI]".to_owned()
 }
 
 impl Config {
@@ -54,14 +54,20 @@ impl Config {
     /// Loads configuration from files and merges with defaults
     ///
     /// Searches for configuration in the following order:
-    /// 1. Project config: walks up from current directory looking for .demoji.toml
-    /// 2. Global config: ~/.config/demoji/config.toml or ~/.demoji.toml
+    /// 1. Project config: walks up from current directory looking for `.demoji.toml`
+    /// 2. Global config: `~/.config/demoji/config.toml` or `~/.demoji.toml`
     /// 3. Falls back to defaults if no config files found
+    ///
+    /// # Errors
+    /// Returns an error if the current directory cannot be determined or config loading fails.
     pub fn load() -> Result<Self> {
         Self::load_from_dir(&std::env::current_dir()?)
     }
 
     /// Loads configuration starting from a specific directory
+    ///
+    /// # Errors
+    /// Returns an error if config file loading or parsing fails.
     pub fn load_from_dir(start_dir: &Path) -> Result<Self> {
         let mut config = Self::default();
 
@@ -103,9 +109,8 @@ impl Config {
 
     /// Loads global configuration from user's home directory
     fn load_global_config() -> Result<Option<Self>> {
-        let home_dir = match home_dir() {
-            Some(dir) => dir,
-            None => return Ok(None), // No home directory, skip global config
+        let Some(home_dir) = home_dir() else {
+            return Ok(None); // No home directory, skip global config
         };
 
         // Try ~/.config/demoji/config.toml first (XDG standard)
@@ -133,6 +138,9 @@ impl Config {
     }
 
     /// Loads configuration from a specific file with detailed error handling
+    ///
+    /// # Errors
+    /// Returns an error if the file cannot be read or parsed.
     pub fn load_from_file(path: &Path) -> Result<Self> {
         // Read file with error handling
         let contents = match std::fs::read_to_string(path) {
@@ -160,18 +168,15 @@ impl Config {
             Ok(config) => Ok(config),
             Err(e) => {
                 // Extract line and column information from the error if available
-                let (line, column) = if let Some(span) = e.span() {
+                let (line, column) = e.span().map_or((None, None), |span| {
                     // Count lines up to the error position
                     let line_num = contents[..span.start].matches('\n').count() + 1;
                     let last_newline = contents[..span.start]
                         .rfind('\n')
-                        .map(|i| i + 1)
-                        .unwrap_or(0);
+                        .map_or(0, |i| i + 1);
                     let col_num = span.start - last_newline + 1;
                     (Some(line_num), Some(col_num))
-                } else {
-                    (None, None)
-                };
+                });
 
                 Err(DemojiError::ConfigParseError {
                     path: path.to_path_buf(),
@@ -188,6 +193,7 @@ impl Config {
     ///
     /// This is used to implement the priority chain:
     /// defaults -> global config -> project config -> CLI args
+    #[must_use]
     pub fn merge(self, other: Self) -> Self {
         Self {
             mode: other.mode,
@@ -213,16 +219,18 @@ impl Config {
         }
     }
 
-    /// Generates a default .demoji.toml template with comments
+    /// Generates a default `.demoji.toml` template with comments
+    #[must_use]
     pub fn generate_template() -> String {
         r#"# demoji configuration file
-# See https://github.com/yourusername/demoji for full documentation
+# See https://github.com/dbmrq/demoji for documentation
 
-# Replacement mode: "remove", "replace", or "placeholder"
-# - remove: Delete emoji characters entirely (default)
-# - replace: Use ASCII alternatives (e.g., 😊 → :), ❌ → [X])
+# Replacement mode: "smart", "remove", "replace", or "placeholder"
+# - smart: Replace functional emojis with ASCII, remove decorative ones (default)
+# - remove: Delete all emoji characters entirely
+# - replace: Use ASCII alternatives for all mapped emojis
 # - placeholder: Replace with custom placeholder string
-mode = "remove"
+mode = "smart"
 
 # Custom placeholder string (only used when mode = "placeholder")
 placeholder = "[EMOJI]"
@@ -241,7 +249,7 @@ backup = false
 # Preview changes without writing (dry-run mode)
 dry_run = false
 "#
-        .to_string()
+        .to_owned()
     }
 }
 
@@ -251,44 +259,8 @@ impl Default for Config {
             mode: ReplacementMode::default(),
             placeholder: default_placeholder(),
             extensions: Vec::new(),
-            ignore_patterns: vec![
-                // Binary file extensions
-                "*.png".to_string(),
-                "*.jpg".to_string(),
-                "*.jpeg".to_string(),
-                "*.gif".to_string(),
-                "*.ico".to_string(),
-                "*.woff".to_string(),
-                "*.woff2".to_string(),
-                "*.ttf".to_string(),
-                "*.otf".to_string(),
-                "*.exe".to_string(),
-                "*.dll".to_string(),
-                "*.so".to_string(),
-                "*.dylib".to_string(),
-                "*.zip".to_string(),
-                "*.tar".to_string(),
-                "*.gz".to_string(),
-                "*.bz2".to_string(),
-                "*.xz".to_string(),
-                "*.pdf".to_string(),
-                "*.mp4".to_string(),
-                "*.mp3".to_string(),
-                "*.wav".to_string(),
-                // Common directories to ignore
-                ".git/".to_string(),
-                "node_modules/".to_string(),
-                "target/".to_string(),
-                "build/".to_string(),
-                "dist/".to_string(),
-                ".next/".to_string(),
-                "__pycache__/".to_string(),
-                ".venv/".to_string(),
-                "venv/".to_string(),
-                "vendor/".to_string(),
-                ".idea/".to_string(),
-                ".vscode/".to_string(),
-            ],
+            // Use the shared default ignore patterns from core::walker
+            ignore_patterns: crate::core::default_ignore_patterns(),
             backup: false,
             dry_run: false,
         }
@@ -311,13 +283,18 @@ fn home_dir() -> Option<PathBuf> {
 }
 
 #[cfg(test)]
+#[allow(
+    clippy::unwrap_used,
+    clippy::str_to_string,
+    clippy::assertions_on_result_states
+)]
 mod tests {
     use super::*;
 
     #[test]
     fn test_default_config() {
         let config = Config::default();
-        assert_eq!(config.mode, ReplacementMode::Remove);
+        assert_eq!(config.mode, ReplacementMode::Smart);
         assert_eq!(config.placeholder, "[EMOJI]");
         assert!(config.extensions.is_empty());
         assert!(!config.ignore_patterns.is_empty());
@@ -328,7 +305,7 @@ mod tests {
     #[test]
     fn test_new_config() {
         let config = Config::new();
-        assert_eq!(config.mode, ReplacementMode::Remove);
+        assert_eq!(config.mode, ReplacementMode::Smart);
     }
 
     #[test]
@@ -362,7 +339,7 @@ mod tests {
     #[test]
     fn test_generate_template() {
         let template = Config::generate_template();
-        assert!(template.contains("mode = \"remove\""));
+        assert!(template.contains("mode = \"smart\""));
         assert!(template.contains("placeholder = \"[EMOJI]\""));
         assert!(template.contains("extensions = []"));
         assert!(template.contains("ignore_patterns = []"));
@@ -506,7 +483,7 @@ placeholder = "[CUSTOM]"
 
         let temp_dir = TempDir::new().unwrap();
         let config_path = temp_dir.path().join(".demoji.toml");
-        let content = r#"backup = true"#;
+        let content = r"backup = true";
         fs::write(&config_path, content).unwrap();
 
         let config = Config::load_from_file(&config_path).unwrap();
@@ -520,7 +497,7 @@ placeholder = "[CUSTOM]"
 
         let temp_dir = TempDir::new().unwrap();
         let config_path = temp_dir.path().join(".demoji.toml");
-        let content = r#"dry_run = true"#;
+        let content = r"dry_run = true";
         fs::write(&config_path, content).unwrap();
 
         let config = Config::load_from_file(&config_path).unwrap();

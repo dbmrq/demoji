@@ -30,18 +30,21 @@ impl FileProcessor {
     }
 
     /// Sets the replacer strategy
+    #[must_use]
     pub fn with_replacer(mut self, replacer: Box<dyn EmojiReplacer>) -> Self {
         self.replacer = replacer;
         self
     }
 
     /// Sets dry-run mode
-    pub fn with_dry_run(mut self, dry_run: bool) -> Self {
+    #[must_use]
+    pub const fn with_dry_run(mut self, dry_run: bool) -> Self {
         self.dry_run = dry_run;
         self
     }
 
     /// Sets the backup manager
+    #[must_use]
     pub fn with_backup(mut self, backup_manager: BackupManager) -> Self {
         self.backup_manager = Some(backup_manager);
         self
@@ -79,7 +82,7 @@ impl FileProcessor {
             if let Some(backup_manager) = &self.backup_manager {
                 backup_manager.create_backup(&result.file_path)?;
             }
-            self.write_file(&result.file_path, &result.processed_content)?;
+            Self::write_file(&result.file_path, &result.processed_content)?;
         }
 
         Ok(result)
@@ -89,6 +92,9 @@ impl FileProcessor {
     ///
     /// This method doesn't read or write files, just processes the content.
     /// Useful for testing or processing content from other sources.
+    ///
+    /// # Errors
+    /// This method is infallible, but returns Result for API consistency.
     pub fn process_content(&self, content: &str) -> Result<ProcessingResult> {
         // Find all emojis in the content
         let emoji_matches = self.detector.find_all(content);
@@ -123,13 +129,13 @@ impl FileProcessor {
             emojis_found: emoji_matches.len(),
             lines_with_emojis: lines_with_emojis.len(),
             emoji_matches,
-            original_content: content.to_string(),
+            original_content: content.to_owned(),
             processed_content,
         })
     }
 
     /// Writes processed content back to a file
-    fn write_file(&self, path: &Path, content: &str) -> Result<()> {
+    fn write_file(path: &Path, content: &str) -> Result<()> {
         fs::write(path, content)
             .with_context(|| format!("Failed to write file: {}", path.display()))?;
         Ok(())
@@ -161,7 +167,8 @@ pub struct ProcessingResult {
 
 impl ProcessingResult {
     /// Returns true if any emojis were found
-    pub fn has_emojis(&self) -> bool {
+    #[must_use]
+    pub const fn has_emojis(&self) -> bool {
         self.emojis_found > 0
     }
 
@@ -171,12 +178,17 @@ impl ProcessingResult {
     }
 
     /// Returns the number of emojis that were replaced/removed
-    pub fn emojis_processed(&self) -> usize {
+    #[must_use]
+    pub const fn emojis_processed(&self) -> usize {
         self.emojis_found
     }
 }
 
 #[cfg(test)]
+#[allow(
+    clippy::unwrap_used,
+    clippy::redundant_closure_for_method_calls
+)]
 mod tests {
     use super::*;
     use crate::core::replacer::{AsciiReplacer, PlaceholderReplacer};

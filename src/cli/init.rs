@@ -17,15 +17,18 @@ use crate::config::Config;
 /// * `verbose` - Whether to print verbose output
 /// * `quiet` - Whether to suppress output
 ///
+/// # Errors
+/// Returns an error if:
+/// - The directory cannot be created
+/// - The config file cannot be written
+/// - Current directory cannot be determined
+///
 /// # Returns
 /// * `Ok(())` if the config file was created successfully
 /// * `Err` if there was an error (e.g., file already exists, permission denied)
+#[allow(clippy::print_stdout, clippy::print_stderr)]
 pub fn run_init(path: Option<PathBuf>, verbose: bool, quiet: bool) -> Result<()> {
-    let target_dir = if let Some(p) = path {
-        p
-    } else {
-        std::env::current_dir()?
-    };
+    let target_dir = path.map_or_else(std::env::current_dir, Ok)?;
 
     // Ensure the directory exists
     if !target_dir.exists() {
@@ -39,7 +42,7 @@ pub fn run_init(path: Option<PathBuf>, verbose: bool, quiet: bool) -> Result<()>
     if config_path.exists() {
         if !quiet {
             eprintln!(
-                "⚠️  Config file already exists at: {}",
+                "  Config file already exists at: {}",
                 config_path.display()
             );
         }
@@ -55,7 +58,7 @@ pub fn run_init(path: Option<PathBuf>, verbose: bool, quiet: bool) -> Result<()>
 
     // Print success message
     if !quiet {
-        println!("✅ Created .demoji.toml at: {}", config_path.display());
+        println!(" Created .demoji.toml at: {}", config_path.display());
         if verbose {
             println!("   You can now customize the configuration to match your project's needs.");
             println!("   See the comments in the file for detailed option descriptions.");
@@ -66,6 +69,7 @@ pub fn run_init(path: Option<PathBuf>, verbose: bool, quiet: bool) -> Result<()>
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used)]
 mod tests {
     use super::*;
     use tempfile::TempDir;
@@ -91,7 +95,7 @@ mod tests {
 
         // Should be able to parse the generated file
         let config = Config::load_from_file(&config_path).unwrap();
-        assert_eq!(config.mode, crate::core::ReplacementMode::Remove);
+        assert_eq!(config.mode, crate::core::ReplacementMode::Smart);
         assert_eq!(config.placeholder, "[EMOJI]");
     }
 
@@ -164,7 +168,7 @@ mod tests {
         run_init(Some(temp_dir.path().to_path_buf()), false, true).unwrap();
 
         let content = std::fs::read_to_string(temp_dir.path().join(".demoji.toml")).unwrap();
-        assert!(content.contains("mode = \"remove\""));
+        assert!(content.contains("mode = \"smart\""));
         assert!(content.contains("placeholder = \"[EMOJI]\""));
         assert!(content.contains("extensions = []"));
         assert!(content.contains("ignore_patterns = []"));

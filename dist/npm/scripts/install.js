@@ -37,7 +37,7 @@ if (!target) {
 // Placeholder: Replace with actual GitHub release URL when publishing
 const version = require('../package.json').version;
 const binaryName = platform === 'win32' ? 'demoji.exe' : 'demoji';
-const downloadUrl = `https://github.com/yourusername/demoji/releases/download/v${version}/demoji-${version}-${target}.tar.gz`;
+const downloadUrl = `https://github.com/dbmrq/demoji/releases/download/v${version}/demoji-${version}-${target}.tar.gz`;
 
 console.log(`Installing demoji for ${platform} ${arch} (${target})...`);
 console.log(`Download URL: ${downloadUrl}`);

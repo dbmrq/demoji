@@ -286,3 +286,59 @@ Each module has:
 - Module organization follows Rust best practices
 - Re-exports in lib.rs provide clean public API
 - Default implementations prevent compilation errors in stubs
+
+---
+
+### Setup Agent - 2026-02-25 (Re-verification)
+
+**Environment Verification:**
+- ✅ Rust toolchain is now available: `cargo 1.93.1 (Homebrew)`
+- ✅ Build scripts exist and work: `.villalobos/scripts/build.sh`, `.villalobos/scripts/test.sh`
+- ✅ Feature branch already exists: `villalobos/demoji-cli-tool`
+- ✅ Repository has 3 commits (initial setup + scaffolding + config-system)
+
+**Baseline Build Status:**
+- ✅ Build succeeds with 3 warnings (unused imports in `backup.rs`, `processor.rs`, `walker.rs`)
+- These warnings are expected - the imports will be used when stubs are fully implemented
+
+**Baseline Test Results:**
+- **Total Tests:** 35
+- **Passed:** 33
+- **Failed:** 2 (pre-existing issues, NOT regressions)
+
+**Known Failing Tests (Baseline Issues):**
+1. `config::tests::test_load_from_file` - TOML parsing case sensitivity issue
+2. `config::tests::test_find_project_config` - Same root cause
+
+**Root Cause of Test Failures:**
+The tests use lowercase `mode = "placeholder"` in TOML, but serde expects PascalCase `"Placeholder"`.
+The `ReplacementMode` enum is defined with PascalCase variants (`Remove`, `Replace`, `Placeholder`), but the test TOML files use lowercase.
+
+**Fix Required (Task for Phase 4 or 5):**
+Add `#[serde(rename_all = "lowercase")]` to the `ReplacementMode` enum definition in `src/core/replacer.rs`, or update the test TOML to use PascalCase.
+
+**Implementation Progress Summary:**
+- ✅ **Phase 1 (Scaffolding):** Complete - Task 1.1 done
+- ✅ **Phase 2 (Emoji Processing):** Tasks 2.1, 2.2 implemented (not tested via Task 2.3)
+- ⏳ **Phase 3 (File Operations):** Not started
+- ✅ **Phase 4 (Configuration):** Task 4.1 implemented (has failing tests)
+- ⏳ **Phase 5 (CLI Interface):** Not started
+- ⏳ **Phase 6 (Main Logic):** Not started
+- ⏳ **Phase 7 (Watch Mode):** Not started
+- ⏳ **Phase 8 (Safety & Polish):** Not started
+- ⏳ **Phase 9 (Distribution):** Not started
+- ✅ **Phase 10 (Documentation):** Task 10.1 done
+- ⏳ **Phase 11 (E2E Testing):** Not started
+- ⏳ **Phase 12 (Final Verification):** Not started
+
+**Recommended Next Tasks:**
+1. Fix the config test failures (serde rename issue) - quick win
+2. Complete Task 2.3 (emoji processing unit tests)
+3. Start Phase 3 (file operations) - critical dependency for CLI
+4. Start Phase 5 (CLI interface) once Phase 3 is ready
+
+**Notes for Implementers:**
+- Build with `.villalobos/scripts/build.sh`
+- Test with `.villalobos/scripts/test.sh`
+- Expect 2 test failures until the serde issue is fixed
+- The project compiles and core emoji detection/replacement logic is implemented

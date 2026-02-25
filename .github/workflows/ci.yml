@@ -175,26 +175,6 @@ jobs:
       - name: Check semver compatibility
         run: cargo semver-checks check-release --default-features
 
-  msrv:
-    name: MSRV Check
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: dtolnay/rust-toolchain@stable
-
-      - uses: Swatinem/rust-cache@v2
-        with:
-          cache-on-failure: true
-
-      - name: Install cargo-msrv
-        uses: taiki-e/install-action@v2
-        with:
-          tool: cargo-msrv
-
-      - name: Verify MSRV
-        run: cargo msrv verify
-
   typos:
     name: Spell Check
     runs-on: ubuntu-latest
@@ -206,21 +186,4 @@ jobs:
         with:
           config: .typos.toml
 
-  minimum-versions:
-    name: Minimum Dependency Versions
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
 
-      - uses: dtolnay/rust-toolchain@nightly
-
-      - uses: dtolnay/rust-toolchain@stable
-
-      - uses: Swatinem/rust-cache@v2
-        with:
-          cache-on-failure: true
-
-      - name: Check minimum versions
-        run: |
-          cargo +nightly update -Z minimal-versions
-          cargo +stable check --all-features

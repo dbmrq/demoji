@@ -75,7 +75,9 @@ impl EmojiDetector {
                         end: end_idx,
                         emoji: emoji_str,
                         line: text[..start_idx].matches('\n').count() + 1,
-                        column: start_idx - text[..start_idx].rfind('\n').map(|i| i + 1).unwrap_or(0) + 1,
+                        column: start_idx
+                            - text[..start_idx].rfind('\n').map(|i| i + 1).unwrap_or(0)
+                            + 1,
                     });
                 }
             }
@@ -310,5 +312,401 @@ fn main() {
         let matches = detector.find_all(text);
         assert!(matches.len() >= 5, "Should detect multiple emoji types");
     }
-}
+    // ===== COMPREHENSIVE EMOJI TESTS =====
 
+    // ===== Single Emojis of Various Types =====
+
+    #[test]
+    fn test_single_emoji_face() {
+        let detector = EmojiDetector::new();
+        let matches = detector.find_all("😀");
+        assert_eq!(matches.len(), 1);
+        assert_eq!(matches[0].emoji, "😀");
+    }
+
+    #[test]
+    fn test_single_emoji_animal() {
+        let detector = EmojiDetector::new();
+        let matches = detector.find_all("🐶");
+        assert_eq!(matches.len(), 1);
+        assert_eq!(matches[0].emoji, "🐶");
+    }
+
+    #[test]
+    fn test_single_emoji_object() {
+        let detector = EmojiDetector::new();
+        let matches = detector.find_all("🎸");
+        assert_eq!(matches.len(), 1);
+        assert_eq!(matches[0].emoji, "🎸");
+    }
+
+    #[test]
+    fn test_single_emoji_symbol() {
+        let detector = EmojiDetector::new();
+        let matches = detector.find_all("⭐");
+        assert_eq!(matches.len(), 1);
+        assert_eq!(matches[0].emoji, "⭐");
+    }
+
+    #[test]
+    fn test_single_emoji_heart() {
+        let detector = EmojiDetector::new();
+        let matches = detector.find_all("❤️");
+        assert_eq!(matches.len(), 1);
+        assert_eq!(matches[0].emoji, "❤️");
+    }
+
+    #[test]
+    fn test_single_emoji_checkmark() {
+        let detector = EmojiDetector::new();
+        let matches = detector.find_all("✅");
+        assert_eq!(matches.len(), 1);
+        assert_eq!(matches[0].emoji, "✅");
+    }
+
+    // ===== Emoji Sequences (ZWJ Families) =====
+
+    #[test]
+    fn test_zwj_sequence_family_four_members() {
+        let detector = EmojiDetector::new();
+        let matches = detector.find_all("👨‍👩‍👧‍👦");
+        assert_eq!(matches.len(), 1);
+        assert_eq!(matches[0].emoji, "👨‍👩‍👧‍👦");
+    }
+
+    #[test]
+    fn test_zwj_sequence_couple() {
+        let detector = EmojiDetector::new();
+        let matches = detector.find_all("👨‍❤️‍👨");
+        assert_eq!(matches.len(), 1);
+        assert_eq!(matches[0].emoji, "👨‍❤️‍👨");
+    }
+
+    #[test]
+    fn test_zwj_sequence_profession() {
+        let detector = EmojiDetector::new();
+        let matches = detector.find_all("👨‍⚕️");
+        assert_eq!(matches.len(), 1);
+        assert_eq!(matches[0].emoji, "👨‍⚕️");
+    }
+
+    // ===== Flag Sequences =====
+
+    #[test]
+    fn test_flag_us() {
+        let detector = EmojiDetector::new();
+        let matches = detector.find_all("🇺🇸");
+        assert_eq!(matches.len(), 1);
+        assert_eq!(matches[0].emoji, "🇺🇸");
+    }
+
+    #[test]
+    fn test_flag_gb() {
+        let detector = EmojiDetector::new();
+        let matches = detector.find_all("🇬🇧");
+        assert_eq!(matches.len(), 1);
+        assert_eq!(matches[0].emoji, "🇬🇧");
+    }
+
+    #[test]
+    fn test_flag_japan() {
+        let detector = EmojiDetector::new();
+        let matches = detector.find_all("🇯🇵");
+        assert_eq!(matches.len(), 1);
+        assert_eq!(matches[0].emoji, "🇯🇵");
+    }
+
+    #[test]
+    fn test_multiple_flags() {
+        let detector = EmojiDetector::new();
+        let matches = detector.find_all("🇺🇸 🇬🇧 🇯🇵");
+        assert_eq!(matches.len(), 3);
+        assert_eq!(matches[0].emoji, "🇺🇸");
+        assert_eq!(matches[1].emoji, "🇬🇧");
+        assert_eq!(matches[2].emoji, "🇯🇵");
+    }
+
+    // ===== Skin Tone Modifiers =====
+
+    #[test]
+    fn test_thumbs_up_light_skin_tone() {
+        let detector = EmojiDetector::new();
+        let matches = detector.find_all("👍🏻");
+        assert_eq!(matches.len(), 1);
+        assert_eq!(matches[0].emoji, "👍🏻");
+    }
+
+    #[test]
+    fn test_thumbs_up_medium_skin_tone() {
+        let detector = EmojiDetector::new();
+        let matches = detector.find_all("👍🏽");
+        assert_eq!(matches.len(), 1);
+        assert_eq!(matches[0].emoji, "👍🏽");
+    }
+
+    #[test]
+    fn test_thumbs_up_dark_skin_tone() {
+        let detector = EmojiDetector::new();
+        let matches = detector.find_all("👍🏿");
+        assert_eq!(matches.len(), 1);
+        assert_eq!(matches[0].emoji, "👍🏿");
+    }
+
+    #[test]
+    fn test_wave_with_skin_tones() {
+        let detector = EmojiDetector::new();
+        let matches = detector.find_all("👋🏻 👋🏽 👋🏿");
+        assert_eq!(matches.len(), 3);
+        assert_eq!(matches[0].emoji, "👋🏻");
+        assert_eq!(matches[1].emoji, "👋🏽");
+        assert_eq!(matches[2].emoji, "👋🏿");
+    }
+
+    #[test]
+    fn test_pointing_finger_with_skin_tone() {
+        let detector = EmojiDetector::new();
+        let matches = detector.find_all("☝🏻");
+        assert_eq!(matches.len(), 1);
+        assert_eq!(matches[0].emoji, "☝🏻");
+    }
+
+    // ===== Emojis in Real Source Code Contexts =====
+
+    #[test]
+    fn test_emoji_in_rust_comment() {
+        let detector = EmojiDetector::new();
+        let code = "// TODO: Fix this 🐛 bug";
+        let matches = detector.find_all(code);
+        assert_eq!(matches.len(), 1);
+        assert_eq!(matches[0].emoji, "🐛");
+    }
+
+    #[test]
+    fn test_emoji_in_string_literal() {
+        let detector = EmojiDetector::new();
+        let code = r#"let msg = "Success! 🎉";"#;
+        let matches = detector.find_all(code);
+        assert_eq!(matches.len(), 1);
+        assert_eq!(matches[0].emoji, "🎉");
+    }
+
+    #[test]
+    fn test_emoji_in_multiline_comment() {
+        let detector = EmojiDetector::new();
+        let code = r#"
+/* This function is broken 💔
+   and needs fixing 🔧
+*/"#;
+        let matches = detector.find_all(code);
+        assert_eq!(matches.len(), 2);
+        assert_eq!(matches[0].emoji, "💔");
+        assert_eq!(matches[1].emoji, "🔧");
+    }
+
+    #[test]
+    fn test_emoji_in_python_code() {
+        let detector = EmojiDetector::new();
+        let code = r#"
+def process():
+    # This is a rocket 🚀
+    print("Status: ✅")
+"#;
+        let matches = detector.find_all(code);
+        assert_eq!(matches.len(), 2);
+        assert_eq!(matches[0].emoji, "🚀");
+        assert_eq!(matches[1].emoji, "✅");
+    }
+
+    #[test]
+    fn test_emoji_in_json_string() {
+        let detector = EmojiDetector::new();
+        let json = r#"{"status": "ready 🚀", "error": "failed ❌"}"#;
+        let matches = detector.find_all(json);
+        assert_eq!(matches.len(), 2);
+        assert_eq!(matches[0].emoji, "🚀");
+        assert_eq!(matches[1].emoji, "❌");
+    }
+
+    #[test]
+    fn test_emoji_in_markdown() {
+        let detector = EmojiDetector::new();
+        let markdown = r#"
+# Project Status 📊
+
+- [x] Feature A ✅
+- [ ] Feature B 🚧
+- [x] Bug fix 🐛
+"#;
+        let matches = detector.find_all(markdown);
+        assert_eq!(matches.len(), 4);
+    }
+
+    // ===== Edge Cases =====
+
+    #[test]
+    fn test_empty_string() {
+        let detector = EmojiDetector::new();
+        let matches = detector.find_all("");
+        assert_eq!(matches.len(), 0);
+    }
+
+    #[test]
+    fn test_only_whitespace() {
+        let detector = EmojiDetector::new();
+        let matches = detector.find_all("   \n\t  ");
+        assert_eq!(matches.len(), 0);
+    }
+
+    #[test]
+    fn test_mixed_text_and_emojis() {
+        let detector = EmojiDetector::new();
+        let text = "Start 🎉 middle 🚀 end";
+        let matches = detector.find_all(text);
+        assert_eq!(matches.len(), 2);
+        assert_eq!(matches[0].emoji, "🎉");
+        assert_eq!(matches[1].emoji, "🚀");
+    }
+
+    #[test]
+    fn test_consecutive_emojis() {
+        let detector = EmojiDetector::new();
+        let text = "🎉🚀💯";
+        let matches = detector.find_all(text);
+        assert_eq!(matches.len(), 3);
+        assert_eq!(matches[0].emoji, "🎉");
+        assert_eq!(matches[1].emoji, "🚀");
+        assert_eq!(matches[2].emoji, "💯");
+    }
+
+    #[test]
+    fn test_emoji_at_start() {
+        let detector = EmojiDetector::new();
+        let text = "🎉 celebration";
+        let matches = detector.find_all(text);
+        assert_eq!(matches.len(), 1);
+        assert_eq!(matches[0].start, 0);
+    }
+
+    #[test]
+    fn test_emoji_at_end() {
+        let detector = EmojiDetector::new();
+        let text = "celebration 🎉";
+        let matches = detector.find_all(text);
+        assert_eq!(matches.len(), 1);
+        assert_eq!(matches[0].emoji, "🎉");
+    }
+
+    #[test]
+    fn test_emoji_only() {
+        let detector = EmojiDetector::new();
+        let text = "🎉";
+        let matches = detector.find_all(text);
+        assert_eq!(matches.len(), 1);
+        assert_eq!(matches[0].emoji, "🎉");
+    }
+
+    #[test]
+    fn test_emoji_match_positions() {
+        let detector = EmojiDetector::new();
+        let text = "Hello 👋 World 🌍";
+        let matches = detector.find_all(text);
+        assert_eq!(matches.len(), 2);
+
+        // First emoji at position 6
+        assert_eq!(matches[0].start, 6);
+        assert_eq!(matches[0].end, 6 + "👋".len());
+
+        // Second emoji after "World "
+        assert!(matches[1].start > matches[0].end);
+    }
+
+    #[test]
+    fn test_emoji_line_tracking_multiple_lines() {
+        let detector = EmojiDetector::new();
+        let text = "Line 1 🎉\nLine 2 🚀\nLine 3 💯";
+        let matches = detector.find_all(text);
+        assert_eq!(matches.len(), 3);
+        assert_eq!(matches[0].line, 1);
+        assert_eq!(matches[1].line, 2);
+        assert_eq!(matches[2].line, 3);
+    }
+
+    #[test]
+    fn test_emoji_column_tracking() {
+        let detector = EmojiDetector::new();
+        let text = "abc 🎉 def";
+        let matches = detector.find_all(text);
+        assert_eq!(matches.len(), 1);
+        assert_eq!(matches[0].column, 5); // "abc " is 4 chars, emoji at position 5
+    }
+
+    #[test]
+    fn test_emoji_match_len() {
+        let detector = EmojiDetector::new();
+        let text = "👋";
+        let matches = detector.find_all(text);
+        assert_eq!(matches.len(), 1);
+        assert_eq!(matches[0].len(), "👋".len());
+    }
+
+    #[test]
+    fn test_emoji_match_is_empty() {
+        let detector = EmojiDetector::new();
+        let text = "👋";
+        let matches = detector.find_all(text);
+        assert_eq!(matches.len(), 1);
+        assert!(!matches[0].is_empty());
+    }
+
+    #[test]
+    fn test_emoji_match_as_str() {
+        let detector = EmojiDetector::new();
+        let text = "👋";
+        let matches = detector.find_all(text);
+        assert_eq!(matches.len(), 1);
+        assert_eq!(matches[0].as_str(), "👋");
+    }
+
+    #[test]
+    fn test_contains_emoji_with_multiple() {
+        let detector = EmojiDetector::new();
+        assert!(detector.contains_emoji("🎉 🚀 💯"));
+    }
+
+    #[test]
+    fn test_contains_emoji_false() {
+        let detector = EmojiDetector::new();
+        assert!(!detector.contains_emoji("no emojis here"));
+    }
+
+    #[test]
+    fn test_emoji_detector_default() {
+        let detector = EmojiDetector::default();
+        let matches = detector.find_all("Hello 👋");
+        assert_eq!(matches.len(), 1);
+    }
+
+    #[test]
+    fn test_emoji_with_variation_selector() {
+        let detector = EmojiDetector::new();
+        // Some emojis have variation selectors (U+FE0F)
+        let matches = detector.find_all("❤️");
+        assert_eq!(matches.len(), 1);
+    }
+
+    #[test]
+    fn test_keycap_sequences() {
+        let detector = EmojiDetector::new();
+        let text = "1️⃣ 2️⃣ 3️⃣";
+        let matches = detector.find_all(text);
+        assert_eq!(matches.len(), 3);
+    }
+
+    #[test]
+    fn test_mixed_emoji_types_in_one_string() {
+        let detector = EmojiDetector::new();
+        let text = "Face: 😀, Flag: 🇺🇸, Family: 👨‍👩‍👧, Skin tone: 👍🏽";
+        let matches = detector.find_all(text);
+        assert!(matches.len() >= 4);
+    }
+}

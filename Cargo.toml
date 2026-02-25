@@ -6,6 +6,7 @@ authors = ["demoji contributors"]
 description = "A fast CLI tool to remove or replace emoji characters from source code files"
 license = "MIT"
 repository = "https://github.com/yourusername/demoji"
+readme = "README.md"
 keywords = ["emoji", "cli", "source-code", "cleanup"]
 categories = ["command-line-utilities", "development-tools"]
 

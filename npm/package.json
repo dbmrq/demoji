@@ -1,0 +1,49 @@
+{
+  "name": "demoji",
+  "version": "0.1.0",
+  "description": "A fast CLI tool to remove or replace emoji characters from source code files",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/yourusername/demoji.git"
+  },
+  "homepage": "https://github.com/yourusername/demoji",
+  "bugs": {
+    "url": "https://github.com/yourusername/demoji/issues"
+  },
+  "keywords": [
+    "emoji",
+    "cli",
+    "source-code",
+    "cleanup",
+    "rust"
+  ],
+  "bin": {
+    "demoji": "./bin/demoji"
+  },
+  "scripts": {
+    "postinstall": "node scripts/install.js",
+    "preuninstall": "node scripts/uninstall.js"
+  },
+  "engines": {
+    "node": ">=12.0.0"
+  },
+  "os": [
+    "darwin",
+    "linux",
+    "win32"
+  ],
+  "cpu": [
+    "x64",
+    "arm64"
+  ],
+  "files": [
+    "bin",
+    "scripts",
+    "README.md",
+    "LICENSE"
+  ],
+  "author": "demoji contributors",
+  "preferGlobal": true,
+  "devDependencies": {}
+}

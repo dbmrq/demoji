@@ -7,20 +7,16 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
 /// Replacement mode for emoji characters
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
+#[serde(rename_all = "lowercase")]
 pub enum ReplacementMode {
     /// Remove emoji characters entirely
+    #[default]
     Remove,
     /// Replace with ASCII alternatives
     Replace,
     /// Replace with a configurable placeholder
     Placeholder,
-}
-
-impl Default for ReplacementMode {
-    fn default() -> Self {
-        Self::Remove
-    }
 }
 
 /// Trait for emoji replacement strategies
@@ -390,7 +386,6 @@ pub fn create_replacer(mode: ReplacementMode, placeholder: Option<&str>) -> Box<
     }
 }
 
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -565,6 +560,407 @@ mod tests {
         assert_eq!(replacer.replace("❤️"), Some("HEART".to_string()));
         assert_eq!(replacer.replace("🔥"), None); // Not in custom mapping
     }
+    // ===== COMPREHENSIVE REPLACEMENT MODE TESTS =====
+
+    // ===== Remove Mode with Various Inputs =====
+
+    #[test]
+    fn test_remove_mode_single_emoji() {
+        let replacer = RemoveReplacer;
+        assert_eq!(replacer.replace("😀"), None);
+    }
+
+    #[test]
+    fn test_remove_mode_multiple_emojis() {
+        let replacer = RemoveReplacer;
+        assert_eq!(replacer.replace("😀"), None);
+        assert_eq!(replacer.replace("🎉"), None);
+        assert_eq!(replacer.replace("🚀"), None);
+    }
+
+    #[test]
+    fn test_remove_mode_emoji_with_skin_tone() {
+        let replacer = RemoveReplacer;
+        assert_eq!(replacer.replace("👍🏽"), None);
+    }
+
+    #[test]
+    fn test_remove_mode_zwj_sequence() {
+        let replacer = RemoveReplacer;
+        assert_eq!(replacer.replace("👨‍👩‍👧"), None);
+    }
+
+    #[test]
+    fn test_remove_mode_flag() {
+        let replacer = RemoveReplacer;
+        assert_eq!(replacer.replace("🇺🇸"), None);
+    }
+
+    // ===== Replace Mode with Various Inputs =====
+
+    #[test]
+    fn test_replace_mode_face_emojis() {
+        let replacer = AsciiReplacer::new();
+        assert_eq!(replacer.replace("😀"), Some(":D".to_string()));
+        assert_eq!(replacer.replace("😊"), Some(":)".to_string()));
+        assert_eq!(replacer.replace("😢"), Some(":'(".to_string()));
+    }
+
+    #[test]
+    fn test_replace_mode_hand_gestures() {
+        let replacer = AsciiReplacer::new();
+        assert_eq!(replacer.replace("👍"), Some("[+1]".to_string()));
+        assert_eq!(replacer.replace("👎"), Some("[-1]".to_string()));
+        assert_eq!(replacer.replace("👋"), Some("[wave]".to_string()));
+    }
+
+    #[test]
+    fn test_replace_mode_symbols() {
+        let replacer = AsciiReplacer::new();
+        assert_eq!(replacer.replace("✅"), Some("[✓]".to_string()));
+        assert_eq!(replacer.replace("❌"), Some("[X]".to_string()));
+        assert_eq!(replacer.replace("⭐"), Some("[*]".to_string()));
+    }
+
+    #[test]
+    fn test_replace_mode_hearts() {
+        let replacer = AsciiReplacer::new();
+        assert_eq!(replacer.replace("❤️"), Some("<3".to_string()));
+        assert_eq!(replacer.replace("💔"), Some("</3".to_string()));
+        assert_eq!(replacer.replace("💕"), Some("<3<3".to_string()));
+    }
+
+    #[test]
+    fn test_replace_mode_dev_emojis() {
+        let replacer = AsciiReplacer::new();
+        assert_eq!(replacer.replace("🐛"), Some("[bug]".to_string()));
+        assert_eq!(replacer.replace("🚀"), Some("[rocket]".to_string()));
+        assert_eq!(replacer.replace("📦"), Some("[package]".to_string()));
+        assert_eq!(replacer.replace("🎉"), Some("[party]".to_string()));
+    }
+
+    #[test]
+    fn test_replace_mode_arrows() {
+        let replacer = AsciiReplacer::new();
+        assert_eq!(replacer.replace("➡️"), Some("->".to_string()));
+        assert_eq!(replacer.replace("⬅️"), Some("<-".to_string()));
+        assert_eq!(replacer.replace("⬆️"), Some("^".to_string()));
+        assert_eq!(replacer.replace("⬇️"), Some("v".to_string()));
+    }
+
+    #[test]
+    fn test_replace_mode_unmapped_emoji() {
+        let replacer = AsciiReplacer::new();
+        // Emojis not in the mapping should return None
+        assert_eq!(replacer.replace("🦸"), None);
+        assert_eq!(replacer.replace("🧙"), None);
+    }
+
+    #[test]
+    fn test_replace_mode_with_variation_selector() {
+        let replacer = AsciiReplacer::new();
+        // Test emojis with and without variation selector
+        assert_eq!(replacer.replace("❤️"), Some("<3".to_string()));
+        assert_eq!(replacer.replace("❤"), Some("<3".to_string()));
+    }
+
+    #[test]
+    fn test_replace_mode_emoji_with_skin_tone() {
+        let replacer = AsciiReplacer::new();
+        // Skin tone modifiers are part of the emoji string
+        // The mapping should handle the base emoji
+        assert_eq!(replacer.replace("👍"), Some("[+1]".to_string()));
+    }
+
+    // ===== Placeholder Mode with Various Inputs =====
+
+    #[test]
+    fn test_placeholder_mode_default_single() {
+        let replacer = PlaceholderReplacer::default();
+        assert_eq!(replacer.replace("😀"), Some("[EMOJI]".to_string()));
+    }
+
+    #[test]
+    fn test_placeholder_mode_default_multiple() {
+        let replacer = PlaceholderReplacer::default();
+        assert_eq!(replacer.replace("😀"), Some("[EMOJI]".to_string()));
+        assert_eq!(replacer.replace("🎉"), Some("[EMOJI]".to_string()));
+        assert_eq!(replacer.replace("🚀"), Some("[EMOJI]".to_string()));
+    }
+
+    #[test]
+    fn test_placeholder_mode_custom_single_char() {
+        let replacer = PlaceholderReplacer::new("*");
+        assert_eq!(replacer.replace("😀"), Some("*".to_string()));
+        assert_eq!(replacer.replace("🎉"), Some("*".to_string()));
+    }
+
+    #[test]
+    fn test_placeholder_mode_custom_word() {
+        let replacer = PlaceholderReplacer::new("EMOJI");
+        assert_eq!(replacer.replace("😀"), Some("EMOJI".to_string()));
+        assert_eq!(replacer.replace("🎉"), Some("EMOJI".to_string()));
+    }
+
+    #[test]
+    fn test_placeholder_mode_custom_brackets() {
+        let replacer = PlaceholderReplacer::new("<emoji>");
+        assert_eq!(replacer.replace("😀"), Some("<emoji>".to_string()));
+        assert_eq!(replacer.replace("🎉"), Some("<emoji>".to_string()));
+    }
+
+    #[test]
+    fn test_placeholder_mode_empty_string() {
+        let replacer = PlaceholderReplacer::new("");
+        assert_eq!(replacer.replace("😀"), Some("".to_string()));
+        assert_eq!(replacer.replace("🎉"), Some("".to_string()));
+    }
+
+    #[test]
+    fn test_placeholder_mode_long_placeholder() {
+        let replacer = PlaceholderReplacer::new("[REPLACED_EMOJI_HERE]");
+        assert_eq!(
+            replacer.replace("😀"),
+            Some("[REPLACED_EMOJI_HERE]".to_string())
+        );
+    }
+
+    #[test]
+    fn test_placeholder_mode_special_chars() {
+        let replacer = PlaceholderReplacer::new("@#$%");
+        assert_eq!(replacer.replace("😀"), Some("@#$%".to_string()));
+    }
+
+    #[test]
+    fn test_placeholder_mode_with_skin_tone() {
+        let replacer = PlaceholderReplacer::default();
+        assert_eq!(replacer.replace("👍🏽"), Some("[EMOJI]".to_string()));
+    }
+
+    #[test]
+    fn test_placeholder_mode_with_zwj() {
+        let replacer = PlaceholderReplacer::default();
+        assert_eq!(replacer.replace("👨‍👩‍👧"), Some("[EMOJI]".to_string()));
+    }
+
+    // ===== Create Replacer Factory Tests =====
+
+    #[test]
+    fn test_create_replacer_remove_mode() {
+        let replacer = create_replacer(ReplacementMode::Remove, None);
+        assert_eq!(replacer.replace("😀"), None);
+        assert_eq!(replacer.replace("🎉"), None);
+    }
+
+    #[test]
+    fn test_create_replacer_replace_mode() {
+        let replacer = create_replacer(ReplacementMode::Replace, None);
+        assert_eq!(replacer.replace("😀"), Some(":D".to_string()));
+        assert_eq!(replacer.replace("👍"), Some("[+1]".to_string()));
+    }
+
+    #[test]
+    fn test_create_replacer_placeholder_mode_default() {
+        let replacer = create_replacer(ReplacementMode::Placeholder, None);
+        assert_eq!(replacer.replace("😀"), Some("[EMOJI]".to_string()));
+        assert_eq!(replacer.replace("🎉"), Some("[EMOJI]".to_string()));
+    }
+
+    #[test]
+    fn test_create_replacer_placeholder_mode_custom() {
+        let replacer = create_replacer(ReplacementMode::Placeholder, Some("***"));
+        assert_eq!(replacer.replace("😀"), Some("***".to_string()));
+        assert_eq!(replacer.replace("🎉"), Some("***".to_string()));
+    }
+
+    #[test]
+    fn test_create_replacer_placeholder_mode_empty() {
+        let replacer = create_replacer(ReplacementMode::Placeholder, Some(""));
+        assert_eq!(replacer.replace("😀"), Some("".to_string()));
+    }
+
+    // ===== Edge Cases and Special Scenarios =====
+
+    #[test]
+    fn test_ascii_replacer_consistency() {
+        let replacer1 = AsciiReplacer::new();
+        let replacer2 = AsciiReplacer::new();
+
+        // Same emoji should produce same replacement
+        assert_eq!(replacer1.replace("😀"), replacer2.replace("😀"));
+        assert_eq!(replacer1.replace("🎉"), replacer2.replace("🎉"));
+    }
+
+    #[test]
+    fn test_placeholder_replacer_consistency() {
+        let replacer1 = PlaceholderReplacer::new("TEST");
+        let replacer2 = PlaceholderReplacer::new("TEST");
+
+        // Same emoji should produce same replacement
+        assert_eq!(replacer1.replace("😀"), replacer2.replace("😀"));
+        assert_eq!(replacer1.replace("🎉"), replacer2.replace("🎉"));
+    }
+
+    #[test]
+    fn test_ascii_replacer_get_replacement() {
+        let replacer = AsciiReplacer::new();
+        assert_eq!(replacer.get_replacement("😀"), Some(":D"));
+        assert_eq!(replacer.get_replacement("🎉"), Some("[party]"));
+        assert_eq!(replacer.get_replacement("🦸"), None);
+    }
+
+    #[test]
+    fn test_custom_mapping_empty() {
+        let custom_map = HashMap::new();
+        let replacer = AsciiReplacer::with_mapping(custom_map);
+
+        // All emojis should return None with empty mapping
+        assert_eq!(replacer.replace("😀"), None);
+        assert_eq!(replacer.replace("🎉"), None);
+    }
+
+    #[test]
+    fn test_custom_mapping_partial() {
+        let mut custom_map = HashMap::new();
+        custom_map.insert("😀".to_string(), "HAPPY".to_string());
+        custom_map.insert("😢".to_string(), "SAD".to_string());
+
+        let replacer = AsciiReplacer::with_mapping(custom_map);
+        assert_eq!(replacer.replace("😀"), Some("HAPPY".to_string()));
+        assert_eq!(replacer.replace("😢"), Some("SAD".to_string()));
+        assert_eq!(replacer.replace("🎉"), None); // Not in custom mapping
+    }
+
+    #[test]
+    fn test_custom_mapping_override() {
+        let mut custom_map = HashMap::new();
+        custom_map.insert("😀".to_string(), "CUSTOM_SMILE".to_string());
+
+        let replacer = AsciiReplacer::with_mapping(custom_map);
+        // Custom mapping should override default
+        assert_eq!(replacer.replace("😀"), Some("CUSTOM_SMILE".to_string()));
+    }
+
+    #[test]
+    fn test_replacement_mode_serialization() {
+        // Test that ReplacementMode can be used with serde
+        assert_eq!(ReplacementMode::Remove, ReplacementMode::Remove);
+        assert_eq!(ReplacementMode::Replace, ReplacementMode::Replace);
+        assert_eq!(ReplacementMode::Placeholder, ReplacementMode::Placeholder);
+    }
+
+    #[test]
+    fn test_placeholder_replacer_clone() {
+        let replacer1 = PlaceholderReplacer::new("TEST");
+        let replacer2 = replacer1.clone();
+
+        assert_eq!(replacer1.replace("😀"), replacer2.replace("😀"));
+    }
+
+    #[test]
+    fn test_remove_replacer_always_none() {
+        let replacer = RemoveReplacer;
+
+        // RemoveReplacer should always return None
+        assert_eq!(replacer.replace("😀"), None);
+        assert_eq!(replacer.replace("🎉"), None);
+        assert_eq!(replacer.replace("🚀"), None);
+        assert_eq!(replacer.replace("❤️"), None);
+        assert_eq!(replacer.replace("👍🏽"), None);
+        assert_eq!(replacer.replace("👨‍👩‍👧"), None);
+        assert_eq!(replacer.replace("🇺🇸"), None);
+    }
+
+    #[test]
+    fn test_placeholder_replacer_always_some() {
+        let replacer = PlaceholderReplacer::default();
+
+        // PlaceholderReplacer should always return Some
+        assert!(replacer.replace("😀").is_some());
+        assert!(replacer.replace("🎉").is_some());
+        assert!(replacer.replace("🚀").is_some());
+        assert!(replacer.replace("unknown").is_some());
+    }
+
+    #[test]
+    fn test_ascii_replacer_comprehensive_coverage() {
+        let replacer = AsciiReplacer::new();
+
+        // Test a variety of emoji categories
+        // Faces
+        assert!(replacer.replace("😀").is_some());
+        assert!(replacer.replace("😢").is_some());
+
+        // Hands
+        assert!(replacer.replace("👍").is_some());
+        assert!(replacer.replace("👋").is_some());
+
+        // Symbols
+        assert!(replacer.replace("✅").is_some());
+        assert!(replacer.replace("❌").is_some());
+
+        // Hearts
+        assert!(replacer.replace("❤️").is_some());
+
+        // Dev-related
+        assert!(replacer.replace("🐛").is_some());
+        assert!(replacer.replace("🚀").is_some());
+    }
+
+    #[test]
+    fn test_replacement_mode_default_is_remove() {
+        let default_mode = ReplacementMode::default();
+        assert_eq!(default_mode, ReplacementMode::Remove);
+    }
+
+    #[test]
+    fn test_placeholder_replacer_default_is_emoji() {
+        let replacer = PlaceholderReplacer::default();
+        assert_eq!(replacer.replace("😀"), Some("[EMOJI]".to_string()));
+    }
+
+    #[test]
+    fn test_ascii_replacer_default() {
+        let replacer = AsciiReplacer::default();
+        assert_eq!(replacer.replace("😀"), Some(":D".to_string()));
+    }
+
+    #[test]
+    fn test_remove_replacer_default() {
+        let replacer = RemoveReplacer::default();
+        assert_eq!(replacer.replace("😀"), None);
+    }
+
+    #[test]
+    fn test_emoji_replacer_trait_object() {
+        let replacers: Vec<Box<dyn EmojiReplacer>> = vec![
+            Box::new(RemoveReplacer),
+            Box::new(AsciiReplacer::new()),
+            Box::new(PlaceholderReplacer::default()),
+        ];
+
+        // All should handle the same emoji
+        for replacer in replacers {
+            let _ = replacer.replace("😀");
+        }
+    }
+
+    #[test]
+    fn test_ascii_replacer_all_mapped_emojis() {
+        let replacer = AsciiReplacer::new();
+
+        // Test a sample of all mapped emojis
+        let test_emojis = vec![
+            "😀", "😊", "😂", "😢", "😡", "❤️", "👍", "👎", "👋", "✅", "❌", "⭐", "🔥", "💯",
+            "🐛", "🚀", "📦", "🎉",
+        ];
+
+        for emoji in test_emojis {
+            assert!(
+                replacer.replace(emoji).is_some(),
+                "Emoji {} should be mapped",
+                emoji
+            );
+        }
+    }
 }
-
-

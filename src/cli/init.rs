@@ -41,10 +41,7 @@ pub fn run_init(path: Option<PathBuf>, verbose: bool, quiet: bool) -> Result<()>
     // Check if config file already exists
     if config_path.exists() {
         if !quiet {
-            eprintln!(
-                "  Config file already exists at: {}",
-                config_path.display()
-            );
+            eprintln!("  Config file already exists at: {}", config_path.display());
         }
         return Ok(());
     }

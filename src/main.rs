@@ -10,13 +10,8 @@ use demoji::run;
 
 fn main() {
     // Parse command-line arguments
-    let args = match Args::try_parse() {
-        Ok(args) => args,
-        Err(e) => {
-            eprintln!("{e}");
-            std::process::exit(2);
-        }
-    };
+    // Use parse() instead of try_parse() to let clap handle --help and --version properly
+    let args = Args::parse();
 
     // Load configuration with error handling
     let config = match Config::load() {
@@ -29,14 +24,14 @@ fn main() {
                 eprintln!("Error: Failed to load configuration: {e}");
             }
             std::process::exit(2);
-        }
+        },
     };
 
     // Run the application and get exit code
     match run(&args, &config) {
         Ok(exit_code) => {
             std::process::exit(exit_code);
-        }
+        },
         Err(e) => {
             // Check if it's a DemojiError for better messaging
             if let Some(demoji_err) = e.downcast_ref::<DemojiError>() {
@@ -45,6 +40,6 @@ fn main() {
                 eprintln!("Error: {e}");
             }
             std::process::exit(2);
-        }
+        },
     }
 }

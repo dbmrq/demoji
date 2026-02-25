@@ -74,7 +74,7 @@ impl Reporter for ConsoleReporter {
         self.current_file_emojis = 0;
 
         match self.verbosity {
-            VerbosityLevel::Quiet => {}
+            VerbosityLevel::Quiet => {},
             VerbosityLevel::Normal => {
                 let _ = writeln!(
                     io::stdout(),
@@ -83,7 +83,7 @@ impl Reporter for ConsoleReporter {
                     file_path,
                     file_count
                 );
-            }
+            },
             VerbosityLevel::Verbose => {
                 let _ = writeln!(
                     io::stdout(),
@@ -92,7 +92,7 @@ impl Reporter for ConsoleReporter {
                     file_path.bold(),
                     file_count
                 );
-            }
+            },
         }
     }
 

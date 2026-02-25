@@ -74,9 +74,7 @@ impl EmojiDetector {
                         end: end_idx,
                         emoji: emoji_str,
                         line: text[..start_idx].matches('\n').count() + 1,
-                        column: start_idx
-                            - text[..start_idx].rfind('\n').map_or(0, |i| i + 1)
-                            + 1,
+                        column: start_idx - text[..start_idx].rfind('\n').map_or(0, |i| i + 1) + 1,
                     });
                 }
             }

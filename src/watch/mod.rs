@@ -109,17 +109,17 @@ impl FileWatcher {
                     // Process all file change events (debouncer filters rapid changes)
                     // TODO: Implement file processing once FileProcessor is available
                     // For now, just acknowledge the events
-                }
+                },
                 Ok(Err(e)) => {
                     #[allow(clippy::print_stderr)]
                     {
                         eprintln!("Watch error: {e}");
                     }
-                }
+                },
                 Err(_) => {
                     // Channel closed, exit gracefully
                     break;
-                }
+                },
             }
         }
 

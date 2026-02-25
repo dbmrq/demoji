@@ -160,7 +160,7 @@ impl Config {
                     },
                 }
                 .into());
-            }
+            },
         };
 
         // Parse TOML with detailed error handling
@@ -171,9 +171,7 @@ impl Config {
                 let (line, column) = e.span().map_or((None, None), |span| {
                     // Count lines up to the error position
                     let line_num = contents[..span.start].matches('\n').count() + 1;
-                    let last_newline = contents[..span.start]
-                        .rfind('\n')
-                        .map_or(0, |i| i + 1);
+                    let last_newline = contents[..span.start].rfind('\n').map_or(0, |i| i + 1);
                     let col_num = span.start - last_newline + 1;
                     (Some(line_num), Some(col_num))
                 });
@@ -185,7 +183,7 @@ impl Config {
                     column,
                 }
                 .into())
-            }
+            },
         }
     }
 

@@ -248,7 +248,7 @@ mod tests {
         match demoji_err {
             DemojiError::PermissionDenied { .. } => {
                 // Expected
-            }
+            },
             _ => panic!("Expected PermissionDenied error"),
         }
     }

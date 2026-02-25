@@ -185,10 +185,7 @@ impl ProcessingResult {
 }
 
 #[cfg(test)]
-#[allow(
-    clippy::unwrap_used,
-    clippy::redundant_closure_for_method_calls
-)]
+#[allow(clippy::unwrap_used, clippy::redundant_closure_for_method_calls)]
 mod tests {
     use super::*;
     use crate::core::replacer::{AsciiReplacer, PlaceholderReplacer};

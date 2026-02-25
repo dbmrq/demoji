@@ -529,7 +529,7 @@ pub fn create_replacer(mode: ReplacementMode, placeholder: Option<&str>) -> Box<
                 |p| Box::new(PlaceholderReplacer::new(p)),
             );
             replacer
-        }
+        },
     }
 }
 

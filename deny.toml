@@ -1,11 +1,7 @@
-# cargo-deny configuration
+# cargo-deny configuration (v2 format)
 # https://embarkstudios.github.io/cargo-deny/
-#
-# Run with: cargo deny check
-# Install with: cargo install cargo-deny
 
 [graph]
-# Targets to check (all major platforms)
 targets = [
     "x86_64-unknown-linux-gnu",
     "x86_64-apple-darwin",
@@ -14,24 +10,10 @@ targets = [
 ]
 all-features = true
 
-# ============================================================================
-# Advisories - Security vulnerability checking
-# ============================================================================
 [advisories]
-db-path = "~/.cargo/advisory-db"
-url = "https://github.com/rustsec/advisory-db"
-vulnerability = "deny"
-unmaintained = "warn"
-yanked = "deny"
-notice = "warn"
 ignore = []
 
-# ============================================================================
-# Licenses - Ensure all dependencies have acceptable licenses
-# ============================================================================
 [licenses]
-unlicensed = "deny"
-copyleft = "warn"
 allow = [
     "MIT",
     "Apache-2.0",
@@ -44,42 +26,12 @@ allow = [
     "Unicode-DFS-2016",
     "MPL-2.0",
 ]
-confidence-threshold = 0.8
-exceptions = []
 
-[licenses.private]
-ignore = false
-registries = []
-
-# ============================================================================
-# Bans - Prevent problematic dependencies
-# ============================================================================
 [bans]
 multiple-versions = "warn"
 wildcards = "deny"
-highlight = "all"
-workspace-default-features = "allow"
-external-default-features = "allow"
 
-# Deny specific problematic crates
-deny = [
-    # { crate = "problematic-crate", reason = "Security issue" },
-]
-
-# Skip checking specific crate versions for duplicates
-skip = []
-
-skip-tree = []
-
-# ============================================================================
-# Sources - Ensure dependencies come from trusted sources
-# ============================================================================
 [sources]
 unknown-registry = "deny"
 unknown-git = "warn"
-allow-registry = ["https://github.com/rust-lang/crates.io-index"]
-allow-git = []
-
-[sources.allow-org]
-github = []
 

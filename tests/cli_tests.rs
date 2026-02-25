@@ -167,14 +167,9 @@ fn test_demoji_help_flag() {
     let mut cmd = Command::cargo_bin("demoji").expect("Failed to get binary");
     cmd.arg("--help");
 
-    // clap sends help to stderr and exits with code 2 (current behavior)
-    let assert_result = cmd.assert();
-    let output = assert_result.get_output();
-    let stderr = String::from_utf8_lossy(&output.stderr);
-    assert!(
-        stderr.contains("Remove or replace emoji"),
-        "Help should be in stderr"
-    );
+    cmd.assert()
+        .success()
+        .stdout(predicate::str::contains("Remove or replace emoji"));
 }
 
 #[test]
@@ -182,11 +177,9 @@ fn test_demoji_version_flag() {
     let mut cmd = Command::cargo_bin("demoji").expect("Failed to get binary");
     cmd.arg("--version");
 
-    // clap sends version to stderr and exits with code 2 (current behavior)
-    let assert_result = cmd.assert();
-    let output = assert_result.get_output();
-    let stderr = String::from_utf8_lossy(&output.stderr);
-    assert!(stderr.contains("0.1.0"), "Version should be in stderr");
+    cmd.assert()
+        .success()
+        .stdout(predicate::str::contains("0.1.0"));
 }
 
 // ============================================================================
@@ -511,14 +504,9 @@ fn test_help_shows_subcommands() {
     let mut cmd = Command::cargo_bin("demoji").expect("Failed to get binary");
     cmd.arg("--help");
 
-    // clap sends help to stderr and exits with code 2
-    let assert_result = cmd.assert();
-    let output = assert_result.get_output();
-    let stderr = String::from_utf8_lossy(&output.stderr);
-    assert!(
-        stderr.contains("run") || stderr.contains("watch"),
-        "Help should show subcommands"
-    );
+    cmd.assert()
+        .success()
+        .stdout(predicate::str::contains("run").or(predicate::str::contains("watch")));
 }
 
 #[test]
@@ -526,14 +514,9 @@ fn test_run_help() {
     let mut cmd = Command::cargo_bin("demoji").expect("Failed to get binary");
     cmd.arg("run").arg("--help");
 
-    // clap sends help to stderr and exits with code 0 for subcommand help
-    let assert_result = cmd.assert();
-    let output = assert_result.get_output();
-    let stderr = String::from_utf8_lossy(&output.stderr);
-    assert!(
-        stderr.contains("dry-run") || stderr.contains("mode"),
-        "Help should show options"
-    );
+    cmd.assert()
+        .success()
+        .stdout(predicate::str::contains("dry-run").or(predicate::str::contains("mode")));
 }
 
 #[test]
@@ -541,14 +524,9 @@ fn test_init_help() {
     let mut cmd = Command::cargo_bin("demoji").expect("Failed to get binary");
     cmd.arg("init").arg("--help");
 
-    // clap sends help to stderr and exits with code 0 for subcommand help
-    let assert_result = cmd.assert();
-    let output = assert_result.get_output();
-    let stderr = String::from_utf8_lossy(&output.stderr);
-    assert!(
-        stderr.contains("init") || stderr.contains("config"),
-        "Help should show init info"
-    );
+    cmd.assert()
+        .success()
+        .stdout(predicate::str::contains("init").or(predicate::str::contains("config")));
 }
 
 // ============================================================================

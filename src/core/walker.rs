@@ -155,14 +155,14 @@ impl DirectoryWalker {
                     }
 
                     Some(Ok(path.to_path_buf()))
-                }
+                },
                 Err(e) => {
                     // Convert walk errors to DemojiError with helpful message
                     let err = DemojiError::WalkError {
                         message: format!("Failed to read directory entry: {e}"),
                     };
                     Some(Err(err.into()))
-                }
+                },
             }
         })
     }
@@ -174,11 +174,14 @@ impl Default for DirectoryWalker {
     }
 }
 
-/// Returns the default ignore patterns as a Vec<String>
+/// Returns the default ignore patterns as a `Vec<String>`
 ///
 /// Converts the static DEFAULT_IGNORE_PATTERNS slice to owned strings.
 pub fn default_ignore_patterns() -> Vec<String> {
-    DEFAULT_IGNORE_PATTERNS.iter().map(|s| (*s).to_owned()).collect()
+    DEFAULT_IGNORE_PATTERNS
+        .iter()
+        .map(|s| (*s).to_owned())
+        .collect()
 }
 
 /// Checks if a path should be ignored based on patterns

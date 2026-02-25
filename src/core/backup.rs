@@ -148,7 +148,7 @@ impl BackupManager {
             None => {
                 // If no backup directory is configured, nothing to clean up
                 return Ok(0);
-            }
+            },
         };
 
         if !backup_dir.exists() {

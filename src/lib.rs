@@ -242,21 +242,21 @@ pub fn run(args: &Args, config: &Config) -> Result<i32> {
                 placeholder: cmd_placeholder.clone().or_else(|| args.placeholder.clone()),
             };
             run_on_paths(&merged_args, config, &mut *reporter)
-        }
+        },
         None => {
             // Default run command
             run_on_paths(args, config, &mut *reporter)
-        }
+        },
         Some(Command::Watch { .. }) => {
             // Watch command - not implemented yet
             eprintln!("Watch mode is not yet implemented");
             Ok(2)
-        }
+        },
         Some(Command::Init { .. }) => {
             // Init command - not implemented yet
             eprintln!("Init command is not yet implemented");
             Ok(2)
-        }
+        },
     }
 }
 
@@ -290,7 +290,7 @@ fn run_on_paths(
                 };
                 eprintln!("{}", err.user_message());
                 return Ok(2);
-            }
+            },
         }
     } else {
         config.mode
@@ -369,7 +369,7 @@ fn run_on_paths(
                     }
                 }
                 Ok(true)
-            }
+            },
             Err(e) => {
                 if let Some(demoji_err) = e.downcast_ref::<DemojiError>() {
                     eprintln!("{}", demoji_err.user_message());
@@ -377,7 +377,7 @@ fn run_on_paths(
                     eprintln!("Error processing file {}: {}", file_path.display(), e);
                 }
                 Err(2)
-            }
+            },
         }
     };
 
@@ -397,7 +397,7 @@ fn run_on_paths(
                         if let Err(code) = process_single_file(&file_path) {
                             return Ok(code);
                         }
-                    }
+                    },
                     Err(e) => {
                         if let Some(demoji_err) = e.downcast_ref::<DemojiError>() {
                             eprintln!("{}", demoji_err.user_message());
@@ -405,7 +405,7 @@ fn run_on_paths(
                             eprintln!("Error walking directory: {e}");
                         }
                         return Ok(2);
-                    }
+                    },
                 }
             }
         } else {

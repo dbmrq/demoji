@@ -1,0 +1,25 @@
+{
+  "id": "6114a7d2-36de-47a1-a7d9-02c6c2994657",
+  "created_at": "2026-02-25T00:47:30.038018-03:00",
+  "updated_at": "2026-02-25T00:47:30.038166-03:00",
+  "status": "active",
+  "initial_prompt": "I want to create a tool that can be added to any project in any language to automatically remove emoji from files. It shold optionally monitor files from changes and automatically remove emoji when they're added. And it should have options for either just removing the emoji or for replacing them with simple minimalistic ascii character versions. And it should do this in a very efficient way. I'm thinking the basic app should just run in all files within a directory, so you could simply run `demoji` and it would remove all emoji from all files where you ran it (recursively). But then there should be aditional ways to set options and to monitor directories and files.",
+  "orchestrator": {
+    "id": "15dab40d-9329-4b89-9ae5-4ef917694119",
+    "name": "orchestrator",
+    "session_id": "",
+    "prompt": "",
+    "status": "pending",
+    "result": "",
+    "started_at": "0001-01-01T00:00:00Z",
+    "ended_at": "0001-01-01T00:00:00Z",
+    "last_activity_at": "0001-01-01T00:00:00Z"
+  },
+  "child_agents": null,
+  "task_progress": null,
+  "iteration_count": 0,
+  "consecutive_failures": 0,
+  "total_agents_spawned": 0,
+  "total_agents_completed": 0,
+  "total_agents_failed": 0
+}

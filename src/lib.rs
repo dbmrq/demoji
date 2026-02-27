@@ -22,14 +22,17 @@
 //! ### As a CLI tool
 //!
 //! ```bash
-//! # Check for emojis (dry-run)
-//! demoji run
+//! # Clean emojis from files (writes by default)
+//! demoji src/
 //!
-//! # Remove emojis from files
-//! demoji run --write
+//! # Check for emojis without modifying (for CI/linting)
+//! demoji --check src/
 //!
-//! # Watch for changes
-//! demoji watch --write
+//! # Preview changes without writing
+//! demoji --dry-run src/
+//!
+//! # Watch for changes and auto-clean
+//! demoji watch src/
 //! ```
 //!
 //! ### As a library
@@ -135,8 +138,8 @@
 //!
 //! ## Safety Features
 //!
-//! - **Dry-run by default**: Preview changes before modifying files
-//! - **Backup support**: Create `.bak` files before modifying
+//! - **Check mode**: Use `--check` or `--dry-run` to preview changes before modifying
+//! - **Backup support**: Create `.bak` files before modifying with `--backup`
 //! - **Atomic writes**: Write to temp file then rename (prevents corruption)
 //! - **Gitignore respect**: Honors `.gitignore` patterns automatically
 //! - **Binary file detection**: Skips binary files to avoid corruption
@@ -154,8 +157,8 @@
 //!
 //! When used as a CLI tool:
 //!
-//! - `0`: Success (no emojis found, or emojis successfully processed)
-//! - `1`: Emojis were found (useful with `--check` flag in CI)
+//! - `0`: Success (no emojis found, or emojis successfully cleaned in write mode)
+//! - `1`: Emojis were found (only in `--check` or `--dry-run` mode, useful for CI)
 //! - `2`: Error occurred (IO error, permission denied, invalid config, etc.)
 
 // Allow eprintln! for user-facing error output in CLI
@@ -175,7 +178,7 @@ pub use core::replacer::ReplacementMode;
 
 use anyhow::Result;
 use cli::args::{Args, Command};
-use cli::output::{create_reporter, VerbosityLevel};
+use cli::output::{create_reporter, OutputFormat, VerbosityLevel};
 use core::error::DemojiError;
 use core::replacer::create_replacer;
 use core::DirectoryWalker;
@@ -192,8 +195,8 @@ use std::path::PathBuf;
 /// 6. Returns exit code: 0=success, 1=emojis found, 2=error
 ///
 /// # Exit Codes
-/// - `0`: Success (no emojis found or successfully processed)
-/// - `1`: Emojis were found (useful for CI checks)
+/// - `0`: Success (no emojis found, or emojis successfully cleaned in write mode)
+/// - `1`: Emojis were found (only in `--check` or `--dry-run` mode, for CI)
 /// - `2`: Error occurred (IO, permission, config parsing, etc.)
 ///
 /// # Errors
@@ -208,14 +211,19 @@ pub fn run(args: &Args, config: &Config) -> Result<i32> {
         VerbosityLevel::Normal
     };
 
+    // Determine output format
+    let format = OutputFormat::parse(&args.format).unwrap_or_default();
+
     // Create appropriate reporter
-    let mut reporter = create_reporter(verbosity);
+    let mut reporter = create_reporter(verbosity, format);
 
     // Handle subcommands
     match &args.command {
         Some(Command::Run {
             paths: cmd_paths,
             dry_run: cmd_dry_run,
+            write: cmd_write,
+            check: cmd_check,
             backup: cmd_backup,
             mode: cmd_mode,
             extensions: cmd_extensions,
@@ -223,7 +231,15 @@ pub fn run(args: &Args, config: &Config) -> Result<i32> {
             verbose: cmd_verbose,
             quiet: cmd_quiet,
             placeholder: cmd_placeholder,
+            format: cmd_format,
         }) => {
+            // Override format if specified in subcommand
+            let effective_format = cmd_format
+                .as_ref()
+                .and_then(|f| OutputFormat::parse(f))
+                .unwrap_or(format);
+            let mut reporter = create_reporter(verbosity, effective_format);
+
             // Merge command-specific args with global args
             let merged_args = Args {
                 command: None,
@@ -233,6 +249,8 @@ pub fn run(args: &Args, config: &Config) -> Result<i32> {
                     cmd_paths.clone()
                 },
                 dry_run: *cmd_dry_run || args.dry_run,
+                write: *cmd_write || args.write,
+                check: *cmd_check || args.check,
                 backup: *cmd_backup || args.backup,
                 mode: cmd_mode.clone().or_else(|| args.mode.clone()),
                 extensions: cmd_extensions.clone().or_else(|| args.extensions.clone()),
@@ -240,6 +258,7 @@ pub fn run(args: &Args, config: &Config) -> Result<i32> {
                 verbose: *cmd_verbose || args.verbose,
                 quiet: *cmd_quiet || args.quiet,
                 placeholder: cmd_placeholder.clone().or_else(|| args.placeholder.clone()),
+                format: cmd_format.clone().unwrap_or_else(|| args.format.clone()),
             };
             run_on_paths(&merged_args, config, &mut *reporter)
         },
@@ -300,7 +319,14 @@ fn run_on_paths(
     let placeholder = args.placeholder.as_deref().or(Some(&config.placeholder));
 
     // Determine dry-run mode
-    let dry_run = args.dry_run || config.dry_run;
+    // Priority: --check or --dry-run (enable dry-run) > --write (disable dry-run) > config
+    let dry_run = if args.check || args.dry_run {
+        true
+    } else if args.write {
+        false
+    } else {
+        config.dry_run
+    };
 
     // Determine backup mode from CLI args or config
     let backup = args.backup || config.backup;
@@ -419,10 +445,12 @@ fn run_on_paths(
     reporter.report_summary(total_files, files_with_emojis, total_emojis);
 
     // Return appropriate exit code
-    if files_with_emojis > 0 {
-        Ok(1) // Emojis were found
+    // In check/dry-run mode: exit 1 if emojis found (for CI)
+    // In write mode: exit 0 if emojis were successfully cleaned
+    if files_with_emojis > 0 && dry_run {
+        Ok(1) // Emojis were found in check mode
     } else {
-        Ok(0) // Success, no emojis found
+        Ok(0) // Success (no emojis found, or emojis cleaned)
     }
 }
 

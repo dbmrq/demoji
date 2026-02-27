@@ -23,8 +23,16 @@ pub struct Args {
     pub paths: Vec<PathBuf>,
 
     /// Dry run mode - preview changes without writing
-    #[arg(long, global = true)]
+    #[arg(long, global = true, conflicts_with = "write")]
     pub dry_run: bool,
+
+    /// Write changes to files (default behavior, use for explicitness in scripts)
+    #[arg(long, global = true, conflicts_with = "dry_run")]
+    pub write: bool,
+
+    /// Check mode - report emojis without modifying (exit 1 if found, ideal for CI)
+    #[arg(long, global = true, conflicts_with = "write")]
+    pub check: bool,
 
     /// Create backup files before modifying
     #[arg(long, global = true)]
@@ -53,6 +61,10 @@ pub struct Args {
     /// Custom placeholder text for replacement
     #[arg(long, global = true, value_name = "TEXT")]
     pub placeholder: Option<String>,
+
+    /// Output format: human (default), gcc (compiler-style for IDEs), json, github (GitHub Actions)
+    #[arg(long, global = true, value_name = "FORMAT", default_value = "human")]
+    pub format: String,
 }
 
 /// Available subcommands
@@ -65,8 +77,16 @@ pub enum Command {
         paths: Vec<PathBuf>,
 
         /// Dry run mode - preview changes without writing
-        #[arg(long)]
+        #[arg(long, conflicts_with = "write")]
         dry_run: bool,
+
+        /// Write changes to files (default behavior, use for explicitness in scripts)
+        #[arg(long, conflicts_with = "dry_run")]
+        write: bool,
+
+        /// Check mode - report emojis without modifying (exit 1 if found, ideal for CI)
+        #[arg(long, conflicts_with = "write")]
+        check: bool,
 
         /// Create backup files before modifying
         #[arg(long)]
@@ -95,6 +115,10 @@ pub enum Command {
         /// Custom placeholder text for replacement
         #[arg(long, value_name = "TEXT")]
         placeholder: Option<String>,
+
+        /// Output format: human (default), gcc (compiler-style for IDEs), json, github
+        #[arg(long, value_name = "FORMAT")]
+        format: Option<String>,
     },
 
     /// Watch files for changes and process them automatically
@@ -104,8 +128,16 @@ pub enum Command {
         paths: Vec<PathBuf>,
 
         /// Dry run mode - preview changes without writing
-        #[arg(long)]
+        #[arg(long, conflicts_with = "write")]
         dry_run: bool,
+
+        /// Write changes to files (default behavior, use for explicitness in scripts)
+        #[arg(long, conflicts_with = "dry_run")]
+        write: bool,
+
+        /// Check mode - report emojis without modifying (exit 1 if found, ideal for CI)
+        #[arg(long, conflicts_with = "write")]
+        check: bool,
 
         /// Create backup files before modifying
         #[arg(long)]
@@ -134,6 +166,10 @@ pub enum Command {
         /// Custom placeholder text for replacement
         #[arg(long, value_name = "TEXT")]
         placeholder: Option<String>,
+
+        /// Output format: human (default), gcc (compiler-style for IDEs), json, github
+        #[arg(long, value_name = "FORMAT")]
+        format: Option<String>,
     },
 
     /// Initialize a .demoji.toml configuration file

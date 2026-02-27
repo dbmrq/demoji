@@ -175,9 +175,228 @@ impl Reporter for ConsoleReporter {
     }
 }
 
-/// Helper function to create a reporter based on verbosity level
-pub fn create_reporter(verbosity: VerbosityLevel) -> Box<dyn Reporter> {
-    Box::new(ConsoleReporter::new(verbosity))
+/// Output format for reporting
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum OutputFormat {
+    /// Human-readable colored output (default)
+    #[default]
+    Human,
+    /// GCC/Clang-style output for IDE integration (file:line:col: warning: message)
+    Gcc,
+    /// JSON output for machine processing
+    Json,
+    /// GitHub Actions annotation format
+    Github,
+}
+
+impl OutputFormat {
+    /// Parse output format from string
+    pub fn parse(s: &str) -> Option<Self> {
+        match s.to_lowercase().as_str() {
+            "human" => Some(Self::Human),
+            "gcc" | "compiler" => Some(Self::Gcc),
+            "json" => Some(Self::Json),
+            "github" | "gh" => Some(Self::Github),
+            _ => None,
+        }
+    }
+}
+
+/// GCC-style reporter for IDE integration
+///
+/// Outputs in the format: `file:line:column: warning: message`
+/// This format is understood by Xcode, VS Code, and most IDEs.
+pub struct GccReporter {
+    current_file: Option<String>,
+}
+
+impl GccReporter {
+    /// Creates a new GCC-style reporter
+    #[must_use]
+    pub const fn new() -> Self {
+        Self { current_file: None }
+    }
+}
+
+impl Default for GccReporter {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl Reporter for GccReporter {
+    fn report_file(&mut self, file_path: &str, _file_count: usize) {
+        self.current_file = Some(file_path.to_owned());
+    }
+
+    fn report_match(&mut self, line: usize, column: usize, emoji: &str, _context: &str) {
+        if let Some(ref file) = self.current_file {
+            // Standard GCC warning format: file:line:column: warning: message
+            let _ = writeln!(
+                io::stdout(),
+                "{file}:{line}:{column}: warning: emoji found: {emoji}"
+            );
+        }
+    }
+
+    fn report_summary(
+        &mut self,
+        _total_files: usize,
+        _files_with_emojis: usize,
+        _total_emojis: usize,
+    ) {
+        // No summary in GCC format - IDEs parse individual warnings
+    }
+}
+
+/// GitHub Actions annotation reporter
+///
+/// Outputs in the format: `::warning file={name},line={line},col={col}::{message}`
+/// This format is understood by GitHub Actions and shown inline in PRs.
+pub struct GithubReporter {
+    current_file: Option<String>,
+}
+
+impl GithubReporter {
+    /// Creates a new GitHub Actions reporter
+    #[must_use]
+    pub const fn new() -> Self {
+        Self { current_file: None }
+    }
+}
+
+impl Default for GithubReporter {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl Reporter for GithubReporter {
+    fn report_file(&mut self, file_path: &str, _file_count: usize) {
+        self.current_file = Some(file_path.to_owned());
+    }
+
+    fn report_match(&mut self, line: usize, column: usize, emoji: &str, _context: &str) {
+        if let Some(ref file) = self.current_file {
+            // GitHub Actions annotation format
+            let _ = writeln!(
+                io::stdout(),
+                "::warning file={file},line={line},col={column}::Emoji found: {emoji}"
+            );
+        }
+    }
+
+    fn report_summary(
+        &mut self,
+        total_files: usize,
+        files_with_emojis: usize,
+        total_emojis: usize,
+    ) {
+        if total_emojis > 0 {
+            let _ = writeln!(
+                io::stdout(),
+                "::notice::demoji: {total_files} files processed, {files_with_emojis} with emojis, {total_emojis} total emojis found"
+            );
+        }
+    }
+}
+
+/// JSON reporter for machine-readable output
+pub struct JsonReporter {
+    current_file: Option<String>,
+    matches: Vec<JsonMatch>,
+}
+
+#[derive(Debug)]
+struct JsonMatch {
+    file: String,
+    line: usize,
+    column: usize,
+    emoji: String,
+}
+
+impl JsonReporter {
+    /// Creates a new JSON reporter
+    #[must_use]
+    #[allow(clippy::missing_const_for_fn)] // Vec::new() is not const in stable Rust
+    pub fn new() -> Self {
+        Self {
+            current_file: None,
+            matches: Vec::new(),
+        }
+    }
+}
+
+impl Default for JsonReporter {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl Reporter for JsonReporter {
+    fn report_file(&mut self, file_path: &str, _file_count: usize) {
+        self.current_file = Some(file_path.to_owned());
+    }
+
+    fn report_match(&mut self, line: usize, column: usize, emoji: &str, _context: &str) {
+        if let Some(ref file) = self.current_file {
+            self.matches.push(JsonMatch {
+                file: file.clone(),
+                line,
+                column,
+                emoji: emoji.to_owned(),
+            });
+        }
+    }
+
+    fn report_summary(
+        &mut self,
+        total_files: usize,
+        files_with_emojis: usize,
+        total_emojis: usize,
+    ) {
+        // Output JSON at the end
+        let _ = write!(io::stdout(), "{{\"summary\":{{\"total_files\":{total_files},\"files_with_emojis\":{files_with_emojis},\"total_emojis\":{total_emojis}}},\"matches\":[");
+
+        for (i, m) in self.matches.iter().enumerate() {
+            if i > 0 {
+                let _ = write!(io::stdout(), ",");
+            }
+            // Escape the emoji for JSON
+            let escaped_emoji: String = m
+                .emoji
+                .chars()
+                .map(|c| {
+                    if c == '"' {
+                        "\\\"".to_owned()
+                    } else if c == '\\' {
+                        "\\\\".to_owned()
+                    } else {
+                        c.to_string()
+                    }
+                })
+                .collect();
+            let escaped_file = m.file.replace('\\', "\\\\").replace('"', "\\\"");
+            let line = m.line;
+            let column = m.column;
+            let _ = write!(
+                io::stdout(),
+                "{{\"file\":\"{escaped_file}\",\"line\":{line},\"column\":{column},\"emoji\":\"{escaped_emoji}\"}}"
+            );
+        }
+
+        let _ = writeln!(io::stdout(), "]}}");
+    }
+}
+
+/// Helper function to create a reporter based on verbosity level and output format
+pub fn create_reporter(verbosity: VerbosityLevel, format: OutputFormat) -> Box<dyn Reporter> {
+    match format {
+        OutputFormat::Human => Box::new(ConsoleReporter::new(verbosity)),
+        OutputFormat::Gcc => Box::new(GccReporter::new()),
+        OutputFormat::Github => Box::new(GithubReporter::new()),
+        OutputFormat::Json => Box::new(JsonReporter::new()),
+    }
 }
 
 #[cfg(test)]
@@ -279,20 +498,49 @@ mod tests {
 
     #[test]
     fn test_create_reporter_quiet() {
-        let reporter = create_reporter(VerbosityLevel::Quiet);
+        let reporter = create_reporter(VerbosityLevel::Quiet, OutputFormat::Human);
         let _ = reporter;
     }
 
     #[test]
     fn test_create_reporter_normal() {
-        let reporter = create_reporter(VerbosityLevel::Normal);
+        let reporter = create_reporter(VerbosityLevel::Normal, OutputFormat::Human);
         let _ = reporter;
     }
 
     #[test]
     fn test_create_reporter_verbose() {
-        let reporter = create_reporter(VerbosityLevel::Verbose);
+        let reporter = create_reporter(VerbosityLevel::Verbose, OutputFormat::Human);
         let _ = reporter;
+    }
+
+    #[test]
+    fn test_create_reporter_gcc_format() {
+        let reporter = create_reporter(VerbosityLevel::Normal, OutputFormat::Gcc);
+        let _ = reporter;
+    }
+
+    #[test]
+    fn test_create_reporter_github_format() {
+        let reporter = create_reporter(VerbosityLevel::Normal, OutputFormat::Github);
+        let _ = reporter;
+    }
+
+    #[test]
+    fn test_create_reporter_json_format() {
+        let reporter = create_reporter(VerbosityLevel::Normal, OutputFormat::Json);
+        let _ = reporter;
+    }
+
+    #[test]
+    fn test_output_format_parse() {
+        assert_eq!(OutputFormat::parse("human"), Some(OutputFormat::Human));
+        assert_eq!(OutputFormat::parse("gcc"), Some(OutputFormat::Gcc));
+        assert_eq!(OutputFormat::parse("compiler"), Some(OutputFormat::Gcc));
+        assert_eq!(OutputFormat::parse("json"), Some(OutputFormat::Json));
+        assert_eq!(OutputFormat::parse("github"), Some(OutputFormat::Github));
+        assert_eq!(OutputFormat::parse("gh"), Some(OutputFormat::Github));
+        assert_eq!(OutputFormat::parse("invalid"), None);
     }
 
     #[test]

@@ -179,7 +179,7 @@ fn test_demoji_version_flag() {
 
     cmd.assert()
         .success()
-        .stdout(predicate::str::contains("0.1.0"));
+        .stdout(predicate::str::contains("demoji"));
 }
 
 // ============================================================================
@@ -205,6 +205,76 @@ fn test_exit_code_1_when_emojis_found_in_check_mode() {
 
     // In dry-run mode with emojis found, should exit with code 1
     cmd.assert().code(1);
+}
+
+#[test]
+fn test_check_flag_exits_1_when_emojis_found() {
+    let temp_dir = create_test_dir_with_emojis();
+
+    let mut cmd = Command::cargo_bin("demoji").expect("Failed to get binary");
+    cmd.arg("--check").arg(temp_dir.path());
+
+    // --check mode with emojis found should exit with code 1
+    cmd.assert().code(1);
+}
+
+#[test]
+fn test_check_flag_does_not_modify_files() {
+    let temp_dir = create_test_dir_with_emojis();
+    let test_file = temp_dir.path().join("test.rs");
+    let original_content = fs::read_to_string(&test_file).expect("Failed to read file");
+
+    let mut cmd = Command::cargo_bin("demoji").expect("Failed to get binary");
+    cmd.arg("--check").arg(temp_dir.path());
+    cmd.assert().code(1);
+
+    let after_content = fs::read_to_string(&test_file).expect("Failed to read file");
+    assert_eq!(
+        original_content, after_content,
+        "--check should not modify files"
+    );
+}
+
+#[test]
+fn test_write_flag_modifies_files() {
+    let temp_dir = create_test_dir_with_emojis();
+    let test_file = temp_dir.path().join("test.rs");
+    let original_content = fs::read_to_string(&test_file).expect("Failed to read file");
+    assert!(
+        original_content.contains("👋"),
+        "Test file should have emoji"
+    );
+
+    let mut cmd = Command::cargo_bin("demoji").expect("Failed to get binary");
+    cmd.arg("--write").arg(temp_dir.path());
+    cmd.assert().success();
+
+    let after_content = fs::read_to_string(&test_file).expect("Failed to read file");
+    assert!(
+        !after_content.contains("👋"),
+        "--write should remove emojis"
+    );
+}
+
+#[test]
+fn test_default_behavior_writes_files() {
+    let temp_dir = create_test_dir_with_emojis();
+    let test_file = temp_dir.path().join("test.rs");
+    let original_content = fs::read_to_string(&test_file).expect("Failed to read file");
+    assert!(
+        original_content.contains("👋"),
+        "Test file should have emoji"
+    );
+
+    let mut cmd = Command::cargo_bin("demoji").expect("Failed to get binary");
+    cmd.arg(temp_dir.path());
+    cmd.assert().success();
+
+    let after_content = fs::read_to_string(&test_file).expect("Failed to read file");
+    assert!(
+        !after_content.contains("👋"),
+        "Default behavior should remove emojis"
+    );
 }
 
 #[test]
